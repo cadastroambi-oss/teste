@@ -8618,7 +8618,6 @@ class MusicService :
         const val ROOT = "root"
         const val HOME = "home"
         const val LIBRARY = "library"
-        const val SUGGESTED = "suggested"
         const val HOME_QUICK_PICKS = "home_quick_picks"
         const val HOME_FORGOTTEN_FAVORITES = "home_forgotten_favorites"
         const val HOME_KEEP_LISTENING = "home_keep_listening"
