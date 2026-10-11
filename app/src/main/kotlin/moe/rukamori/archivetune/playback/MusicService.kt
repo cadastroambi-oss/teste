@@ -134,6 +134,7 @@ import moe.rukamori.archivetune.MainActivity
 import moe.rukamori.archivetune.R
 import moe.rukamori.archivetune.BuildConfig
 import moe.rukamori.archivetune.androidauto.AndroidAutoConfiguration
+import moe.rukamori.archivetune.androidauto.AndroidAutoConnectionStatus
 import moe.rukamori.archivetune.androidauto.AndroidAutoCustomAction
 import moe.rukamori.archivetune.androidauto.AndroidAutoSettingsUseCases
 import moe.rukamori.archivetune.cast.CastMediaItemResolver
@@ -439,6 +440,13 @@ class MusicService :
 
     private var scopeJob = SupervisorJob()
     private var scope = CoroutineScope(Dispatchers.Main + scopeJob)
+
+    // Android Auto (projeção pelo celular) lê os botões da sessão de mídia da plataforma,
+    // os mesmos da notificação. Enquanto o carro estiver conectado, esses botões seguem
+    // o layout do carro (ação principal no lugar de "anterior").
+    @Volatile
+    private var carProjectionActive = false
+    private var carLayoutApplied = false
     private var ioScope = CoroutineScope(Dispatchers.IO + scopeJob)
     private val binder = MusicBinder(this)
     private var boundClientCount = 0
@@ -1401,6 +1409,12 @@ class MusicService :
                     mediaSession.notifyChildrenChanged(HOME, homeItemCount, null)
                     mediaSession.notifyChildrenChanged(LIBRARY, 5, null)
                 }
+        }
+        scope.launch {
+            androidAutoSettings.connectionStatus.collect { status ->
+                carProjectionActive = status == AndroidAutoConnectionStatus.PROJECTION
+                updateNotification()
+            }
         }
         player.repeatMode = REPEAT_MODE_OFF
 
@@ -3515,7 +3529,26 @@ class MusicService :
 
     private fun updateNotification() {
         try {
-            mediaSession.setMediaButtonPreferences(buildNotificationButtons(notificationConfiguration))
+            val notificationButtons = buildNotificationButtons(notificationConfiguration)
+            if (carProjectionActive) {
+                // Android Auto (projeção) lê os botões desta sessão: layout do carro primeiro
+                // (ação principal no lugar de "anterior"), resto na fileira extra. Os botões de
+                // voltar/avançar segundos da notificação ficam de fora no carro.
+                val carButtons = buildAndroidAutoButtons(androidAutoSettings.currentConfiguration())
+                val carCommands = carButtons.mapNotNull { it.sessionCommand?.customAction }.toSet()
+                val extraButtons =
+                    notificationButtons.filter {
+                        val action = it.sessionCommand?.customAction
+                        action !in carCommands &&
+                            action != MediaSessionConstants.ACTION_SEEK_BACK_INCREMENT &&
+                            action != MediaSessionConstants.ACTION_SEEK_FORWARD_INCREMENT
+                    }
+                mediaSession.setMediaButtonPreferences(carButtons + extraButtons)
+                carLayoutApplied = true
+            } else {
+                carLayoutApplied = false
+                mediaSession.setMediaButtonPreferences(notificationButtons)
+            }
             updateAndroidAutoButtons()
         } catch (e: Exception) {
             reportException(e)

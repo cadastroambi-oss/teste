@@ -16,6 +16,7 @@ class AndroidAutoSettingsUseCases @Inject constructor(
 ) {
     val configuration: Flow<AndroidAutoConfiguration> = repository.configuration
     val networkState: Flow<AndroidAutoNetworkState> = repository.networkState
+    val connectionStatus: Flow<AndroidAutoConnectionStatus> = repository.connectionStatus
 
     fun observeSettings(): Flow<AndroidAutoSettingsSnapshot> = combine(
         repository.configuration,
