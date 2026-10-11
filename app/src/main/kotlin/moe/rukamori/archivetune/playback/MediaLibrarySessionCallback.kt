@@ -175,6 +175,7 @@ class MediaLibrarySessionCallback
                 .add(MediaSessionConstants.CommandClosePlayback)
                 .add(MediaSessionConstants.CommandSeekBackIncrement)
                 .add(MediaSessionConstants.CommandSeekForwardIncrement)
+                .add(MediaSessionConstants.CommandSkipPrevious)
                 .build()
             builder
                 .setAvailableSessionCommands(availableSessionCommands)
@@ -304,6 +305,11 @@ class MediaLibrarySessionCallback
 
                 MediaSessionConstants.ACTION_SEEK_FORWARD_INCREMENT -> {
                     seekByIncrement(true)
+                    true
+                }
+
+                MediaSessionConstants.ACTION_SKIP_PREVIOUS -> {
+                    session.player.seekToPrevious()
                     true
                 }
                 else -> false
