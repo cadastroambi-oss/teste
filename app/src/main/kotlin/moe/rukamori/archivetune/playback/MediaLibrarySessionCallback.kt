@@ -139,6 +139,7 @@ class MediaLibrarySessionCallback
                 .add(MediaSessionConstants.CommandToggleLibrary)
                 .add(MediaSessionConstants.CommandToggleShuffle)
                 .add(MediaSessionConstants.CommandToggleRepeatMode)
+                .add(MediaSessionConstants.CommandSkipPrevious)
                 .build()
             return if (session.isAutoCompanionController(controller) || session.isAutomotiveController(controller)) {
                 val carButtons = carMediaButtonPreferences(androidAutoSettings.currentConfiguration())
@@ -246,6 +247,11 @@ class MediaLibrarySessionCallback
 
                 MediaSessionConstants.ACTION_TOGGLE_REPEAT_MODE -> {
                     session.player.toggleRepeatMode()
+                    true
+                }
+
+                MediaSessionConstants.ACTION_SKIP_PREVIOUS -> {
+                    session.player.seekToPrevious()
                     true
                 }
                 else -> false
