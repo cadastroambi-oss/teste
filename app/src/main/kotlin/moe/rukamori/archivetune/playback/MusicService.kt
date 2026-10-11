@@ -125,6 +125,7 @@ import moe.rukamori.archivetune.MainActivity
 import moe.rukamori.archivetune.R
 import moe.rukamori.archivetune.BuildConfig
 import moe.rukamori.archivetune.androidauto.AndroidAutoConfiguration
+import moe.rukamori.archivetune.androidauto.AndroidAutoConnectionStatus
 import moe.rukamori.archivetune.androidauto.AndroidAutoCustomAction
 import moe.rukamori.archivetune.androidauto.AndroidAutoSettingsUseCases
 import moe.rukamori.archivetune.cast.CastMediaItemResolver
@@ -365,6 +366,13 @@ class MusicService :
 
     private var scopeJob = SupervisorJob()
     private var scope = CoroutineScope(Dispatchers.Main + scopeJob)
+
+    // Android Auto (projeção pelo celular) lê os botões da sessão de mídia da plataforma,
+    // os mesmos da notificação. Enquanto o carro estiver conectado, esses botões seguem
+    // o layout do carro (ação principal no lugar de "anterior").
+    @Volatile
+    private var carProjectionActive = false
+    private var carLayoutApplied = false
     private var ioScope = CoroutineScope(Dispatchers.IO + scopeJob)
     private val binder = MusicBinder(this)
     private var hasBoundClients = false
@@ -1265,6 +1273,12 @@ class MusicService :
                     mediaSession.notifyChildrenChanged(HOME, homeItemCount, null)
                     mediaSession.notifyChildrenChanged(LIBRARY, 5, null)
                 }
+        }
+        scope.launch {
+            androidAutoSettings.connectionStatus.collect { status ->
+                carProjectionActive = status == AndroidAutoConnectionStatus.PROJECTION
+                updateNotification()
+            }
         }
         player.repeatMode = REPEAT_MODE_OFF
 
@@ -3855,7 +3869,20 @@ class MusicService :
                         .setEnabled(currentSong.value != null && currentMediaMetadata.value?.isPodcast != true)
                         .build(),
                 )
-            mediaSession.setCustomLayout(customLayout)
+            if (carProjectionActive) {
+                val carButtons = buildAndroidAutoButtons(androidAutoSettings.currentConfiguration())
+                val carCommands = carButtons.mapNotNull { it.sessionCommand?.customAction }.toSet()
+                val extraButtons = customLayout
+                    .filter { it.sessionCommand?.customAction !in carCommands }
+                mediaSession.setMediaButtonPreferences(carButtons + extraButtons)
+                carLayoutApplied = true
+            } else {
+                if (carLayoutApplied) {
+                    mediaSession.setMediaButtonPreferences(emptyList())
+                    carLayoutApplied = false
+                }
+                mediaSession.setCustomLayout(customLayout)
+            }
             updateAndroidAutoButtons()
         } catch (e: Exception) {
             reportException(e)
