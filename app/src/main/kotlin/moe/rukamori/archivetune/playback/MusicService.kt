@@ -3877,7 +3877,7 @@ class MusicService :
         listOf(configuration.primaryAction, configuration.secondaryAction)
             .filter { it != AndroidAutoCustomAction.NONE }
             .distinct()
-            .map { action ->
+            .mapIndexed { index, action ->
                 when (action) {
                     AndroidAutoCustomAction.LIKE -> CommandButton.Builder()
                         .setDisplayName(
@@ -3888,20 +3888,17 @@ class MusicService :
                         )
                         .setSessionCommand(CommandToggleLike)
                         .setEnabled(currentSong.value != null)
-                        .build()
                     AndroidAutoCustomAction.START_RADIO -> CommandButton.Builder()
                         .setDisplayName(getString(R.string.start_radio))
                         .setIconResId(R.drawable.radio)
                         .setSessionCommand(CommandToggleStartRadio)
                         .setEnabled(currentSong.value != null && currentMediaMetadata.value?.isPodcast != true)
-                        .build()
                     AndroidAutoCustomAction.SHUFFLE -> CommandButton.Builder()
                         .setDisplayName(
                             getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on),
                         )
                         .setIconResId(if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle)
                         .setSessionCommand(CommandToggleShuffle)
-                        .build()
                     AndroidAutoCustomAction.REPEAT -> CommandButton.Builder()
                         .setDisplayName(
                             getString(
@@ -3920,9 +3917,13 @@ class MusicService :
                             },
                         )
                         .setSessionCommand(CommandToggleRepeatMode)
-                        .build()
                     AndroidAutoCustomAction.NONE -> error("None is not a media button")
                 }
+                    // Tela dividida do Android Auto: a ação principal ocupa a posição
+                    // do botão "anterior" (à esquerda do play/pausa); "próxima" continua
+                    // à direita. As demais ações ficam só no player em tela cheia.
+                    .setSlots(if (index == 0) CommandButton.SLOT_BACK else CommandButton.SLOT_OVERFLOW)
+                    .build()
             }
 
     fun refreshPlaybackNotification() {
