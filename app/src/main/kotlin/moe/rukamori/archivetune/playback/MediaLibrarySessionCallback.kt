@@ -140,6 +140,7 @@ class MediaLibrarySessionCallback
                 .add(MediaSessionConstants.CommandToggleLibrary)
                 .add(MediaSessionConstants.CommandToggleShuffle)
                 .add(MediaSessionConstants.CommandToggleRepeatMode)
+                .add(MediaSessionConstants.CommandSkipPrevious)
                 .build()
             builder.setAvailableSessionCommands(availableSessionCommands)
             if (isCarController(session, controller)) {
@@ -241,6 +242,11 @@ class MediaLibrarySessionCallback
 
                 MediaSessionConstants.ACTION_TOGGLE_REPEAT_MODE -> {
                     session.player.toggleRepeatMode()
+                    true
+                }
+
+                MediaSessionConstants.ACTION_SKIP_PREVIOUS -> {
+                    session.player.seekToPrevious()
                     true
                 }
                 else -> false

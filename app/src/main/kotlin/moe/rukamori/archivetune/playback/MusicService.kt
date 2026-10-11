@@ -167,6 +167,7 @@ import moe.rukamori.archivetune.constants.LastFMUseNowPlaying
 import moe.rukamori.archivetune.constants.ListenBrainzEnabledKey
 import moe.rukamori.archivetune.constants.ListenBrainzTokenKey
 import moe.rukamori.archivetune.constants.MaxSongCacheSizeKey
+import moe.rukamori.archivetune.constants.MediaSessionConstants.CommandSkipPrevious
 import moe.rukamori.archivetune.constants.MediaSessionConstants.CommandToggleLike
 import moe.rukamori.archivetune.constants.MediaSessionConstants.CommandToggleRepeatMode
 import moe.rukamori.archivetune.constants.MediaSessionConstants.CommandToggleShuffle
@@ -3955,6 +3956,22 @@ class MusicService :
                     // à direita. As demais ações ficam só no player em tela cheia.
                     .setSlots(if (index == 0) CommandButton.SLOT_BACK else CommandButton.SLOT_OVERFLOW)
                     .build()
+            }
+            .let { buttons ->
+                if (buttons.isEmpty()) {
+                    buttons
+                } else {
+                    // A posição de "anterior" foi ocupada pela ação principal: oferece
+                    // "voltar" na fileira extra do player em tela cheia.
+                    buttons.take(1) +
+                        CommandButton.Builder()
+                            .setDisplayName(getString(R.string.widget_previous))
+                            .setIconResId(R.drawable.skip_previous)
+                            .setSessionCommand(CommandSkipPrevious)
+                            .setSlots(CommandButton.SLOT_OVERFLOW)
+                            .build() +
+                        buttons.drop(1)
+                }
             }
 
     private suspend fun recoverSong(
