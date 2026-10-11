@@ -1,0 +1,50 @@
+name: Build de teste (Android Auto)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - android-auto-sugestoes
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Generate translation contributor credits
+        run: python scripts/generate_translation_contributors.py
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: 21
+          distribution: "temurin"
+
+      - name: Set Up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build debug APK (instala ao lado do app oficial)
+        run: ./gradlew --console=plain assembleGmsMobileUniversalDebug
+        env:
+          PULL_REQUEST: "true"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: ArchiveTune-android-auto-teste
+          path: |
+            app/build/outputs/apk/gms/mobile/universal/debug/*.apk
+            app/build/outputs/apk/gmsMobileUniversal/debug/*.apk
