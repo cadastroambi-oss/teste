@@ -17,4 +17,5 @@
     <string name="widget_playback_spotlight_name">Artwork spotlight</string>
     <string name="widget_playback_command_name">Playback remote</string>
     <string name="widget_listening_insights_name">Listening journal</string>
+    <string name="widget_playback_controls_description">Song title with play/pause, start radio and like</string>
 </resources>

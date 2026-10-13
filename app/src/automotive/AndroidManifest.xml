@@ -57,6 +57,7 @@
         <receiver android:name=".widget.PlaybackCapsuleWidgetReceiver" tools:node="remove" />
         <receiver android:name=".widget.PlaybackSpotlightWidgetReceiver" tools:node="remove" />
         <receiver android:name=".widget.PlaybackCommandWidgetReceiver" tools:node="remove" />
+        <receiver android:name=".widget.PlaybackControlsWidgetReceiver" tools:node="remove" />
         <receiver android:name=".widget.ListeningInsightsWidgetReceiver" tools:node="remove" />
 
         <meta-data
