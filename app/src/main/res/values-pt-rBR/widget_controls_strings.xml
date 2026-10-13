@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_playback_controls_description">Nome da música com play/pausa, iniciar rádio e curtir</string>
+    <string name="widget_playback_controls_description">Nome da música com curtir, voltar, play/pausa, avançar e rádio</string>
 </resources>
