@@ -1212,6 +1212,8 @@ class MusicService :
                 player = player,
                 scope = scope,
                 loadWidgetInsights = loadWidgetInsightsUseCase,
+                isCurrentSongLiked = { currentSong.value?.song?.liked == true },
+                canStartRadio = { currentSong.value != null && currentMediaMetadata.value?.isPodcast != true },
             )
 
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -1329,6 +1331,7 @@ class MusicService :
 
         currentSong.debounce(300).collect(scope) { song ->
             updateNotification()
+            widgetUpdater.update()
             requestDiscordSync(
                 reason =
                     if (song == null) {
@@ -8581,6 +8584,14 @@ class MusicService :
                     player.prepare()
                     player.play()
                 }
+            }
+
+            "moe.rukamori.archivetune.WIDGET_TOGGLE_LIKE" -> {
+                toggleLike()
+            }
+
+            "moe.rukamori.archivetune.WIDGET_START_RADIO" -> {
+                if (currentMediaMetadata.value?.isPodcast != true) toggleStartRadio()
             }
 
             "moe.rukamori.archivetune.WIDGET_SKIP_PREV" -> {

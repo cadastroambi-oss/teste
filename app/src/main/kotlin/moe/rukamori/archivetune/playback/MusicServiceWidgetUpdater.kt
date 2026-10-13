@@ -43,6 +43,7 @@ import moe.rukamori.archivetune.widget.MusicWidgetKeys
 import moe.rukamori.archivetune.widget.NowPlayingCardWidget
 import moe.rukamori.archivetune.widget.PlaybackCapsuleWidget
 import moe.rukamori.archivetune.widget.PlaybackCommandWidget
+import moe.rukamori.archivetune.widget.PlaybackControlsWidget
 import moe.rukamori.archivetune.widget.PlaybackDeckWidget
 import moe.rukamori.archivetune.widget.PlaybackSpotlightWidget
 import moe.rukamori.archivetune.widget.WidgetInsightsSnapshot
@@ -54,6 +55,8 @@ internal class MusicServiceWidgetUpdater(
     private val player: Player,
     private val scope: CoroutineScope,
     private val loadWidgetInsights: LoadWidgetInsightsUseCase,
+    private val isCurrentSongLiked: () -> Boolean = { false },
+    private val canStartRadio: () -> Boolean = { false },
 ) {
     private val widgetManager = GlanceAppWidgetManager(service)
     private var stateJob: Job? = null
@@ -102,6 +105,8 @@ internal class MusicServiceWidgetUpdater(
                 playbackPosition = player.playbackProgress(),
                 artPath = artFile?.absolutePath,
                 dominantColor = dominantColor,
+                isLiked = isCurrentSongLiked(),
+                canStartRadio = canStartRadio(),
                 insights = WidgetInsightsSnapshot.Empty,
             )
 
@@ -162,6 +167,8 @@ internal class MusicServiceWidgetUpdater(
             this[MusicWidgetKeys.ART_PATH]?.let { mutable[MusicWidgetKeys.ART_PATH] = it }
             this[MusicWidgetKeys.IS_PLAYING]?.let { mutable[MusicWidgetKeys.IS_PLAYING] = it }
             this[MusicWidgetKeys.IS_AVAILABLE]?.let { mutable[MusicWidgetKeys.IS_AVAILABLE] = it }
+            this[MusicWidgetKeys.IS_LIKED]?.let { mutable[MusicWidgetKeys.IS_LIKED] = it }
+            this[MusicWidgetKeys.CAN_START_RADIO]?.let { mutable[MusicWidgetKeys.CAN_START_RADIO] = it }
             this[MusicWidgetKeys.DOMINANT_COLOR]?.let { mutable[MusicWidgetKeys.DOMINANT_COLOR] = it }
             this[MusicWidgetKeys.PLAYBACK_POSITION]?.let { mutable[MusicWidgetKeys.PLAYBACK_POSITION] = it }
             this[MusicWidgetKeys.LISTENING_TIME]?.let { mutable[MusicWidgetKeys.LISTENING_TIME] = it }
@@ -177,6 +184,8 @@ internal class MusicServiceWidgetUpdater(
         this[MusicWidgetKeys.TRACK_ARTIST] = snapshot.artist
         this[MusicWidgetKeys.IS_PLAYING] = snapshot.isPlaying
         this[MusicWidgetKeys.IS_AVAILABLE] = snapshot.isAvailable
+        this[MusicWidgetKeys.IS_LIKED] = snapshot.isLiked
+        this[MusicWidgetKeys.CAN_START_RADIO] = snapshot.canStartRadio
         this[MusicWidgetKeys.PLAYBACK_POSITION] = snapshot.playbackPosition
 
         val artPath = snapshot.artPath
@@ -314,6 +323,8 @@ internal class MusicServiceWidgetUpdater(
         val playbackPosition: Float,
         val artPath: String?,
         val dominantColor: Int?,
+        val isLiked: Boolean = false,
+        val canStartRadio: Boolean = false,
         val insights: WidgetInsightsSnapshot,
     )
 
@@ -340,6 +351,7 @@ internal class MusicServiceWidgetUpdater(
                 WidgetTarget(PlaybackCapsuleWidget::class.java, PlaybackCapsuleWidget()),
                 WidgetTarget(PlaybackSpotlightWidget::class.java, PlaybackSpotlightWidget()),
                 WidgetTarget(PlaybackCommandWidget::class.java, PlaybackCommandWidget()),
+                WidgetTarget(PlaybackControlsWidget::class.java, PlaybackControlsWidget()),
                 WidgetTarget(
                     widgetClass = ListeningInsightsWidget::class.java,
                     widget = ListeningInsightsWidget(),
@@ -355,6 +367,7 @@ internal class MusicServiceWidgetUpdater(
                 WidgetTarget(PlaybackCapsuleWidget::class.java, PlaybackCapsuleWidget()),
                 WidgetTarget(PlaybackSpotlightWidget::class.java, PlaybackSpotlightWidget()),
                 WidgetTarget(PlaybackCommandWidget::class.java, PlaybackCommandWidget()),
+                WidgetTarget(PlaybackControlsWidget::class.java, PlaybackControlsWidget()),
             )
     }
 }
