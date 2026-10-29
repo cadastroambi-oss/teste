@@ -1,0 +1,36 @@
+name: Publicar APK de teste
+
+on:
+  push:
+    branches:
+      - publicar-apk
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar APK do último build de teste
+        uses: actions/download-artifact@v5
+        with:
+          name: ArchiveTune-android-auto-teste
+          run-id: 40806807783
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: apk
+
+      - name: Publicar como release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -e
+          cp "$(ls apk/*.apk | head -1)" ArchiveTune-Debug.apk
+          gh release delete teste --yes --cleanup-tag 2>/dev/null || true
+          gh release create teste ArchiveTune-Debug.apk \
+            --target "${{ github.sha }}" \
+            --title "ArchiveTune Debug (teste)" \
+            --notes "Build de teste: curtir no Android Auto, widget 4x1, sem LeakCanary." \
+            --prerelease
