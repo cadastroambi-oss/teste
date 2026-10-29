@@ -8,21 +8,16 @@
 package moe.rukamori.archivetune
 
 import android.app.Application
-import leakcanary.AppWatcher
-import leakcanary.LeakCanary
 
+// LeakCanary removido desta versão: ele gravava despejos de memória
+// (arquivos de dezenas de MB) e mostrava notificações de relatório.
 internal object LeakCanaryVariant {
   @JvmStatic
-  fun initialize(@Suppress("UNUSED_PARAMETER") application: Application) {
-    AppWatcher.config = AppWatcher.config.copy(enabled = true)
-    LeakCanary.config = LeakCanary.config.copy(dumpHeap = true)
-  }
+  fun initialize(@Suppress("UNUSED_PARAMETER") application: Application) = Unit
 
   @JvmStatic
   fun setEnabled(
     @Suppress("UNUSED_PARAMETER") context: android.content.Context,
     @Suppress("UNUSED_PARAMETER") enabled: Boolean,
-  ) {
-    // Debug builds intentionally ignore the Nightly-only toggle.
-  }
+  ) = Unit
 }
