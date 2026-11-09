@@ -1356,6 +1356,7 @@ class MusicService :
         mediaLibrarySessionCallback.apply {
             toggleLike = ::toggleLike
             toggleStartRadio = ::toggleStartRadio
+            cycleShuffleMode = ::cycleShuffleMode
             toggleLibrary = ::toggleLibrary
             toggleDownload = ::toggleCurrentDownload
             toggleSleepTimer = ::toggleSleepTimerFromNotification
@@ -1364,7 +1365,7 @@ class MusicService :
             carMediaButtonPreferences = ::buildAndroidAutoButtons
             adoptQueueContinuation = ::adoptQueueContinuation
         }
-        val mediaSessionBuilder = MediaLibrarySession.Builder(this, player, mediaLibrarySessionCallback)
+        val mediaSessionBuilder = MediaLibrarySession.Builder(this, StableQueueSessionPlayer(player), mediaLibrarySessionCallback)
             .setBitmapLoader(CoilBitmapLoader(this, scope))
         if (BuildConfig.DEVICE != "automotive") {
             mediaSessionBuilder.setSessionActivity(
@@ -3652,8 +3653,8 @@ class MusicService :
 
             MediaNotificationAction.SHUFFLE ->
                 customNotificationButton(
-                    displayName = getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on),
-                    iconResId = if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle,
+                    displayName = shuffleButtonLabel(),
+                    iconResId = shuffleButtonIcon(),
                     command = CommandToggleShuffle,
                 )
 
@@ -3862,9 +3863,9 @@ class MusicService :
                         .setEnabled(currentSong.value != null && currentMediaMetadata.value?.isPodcast != true)
                     AndroidAutoCustomAction.SHUFFLE -> CommandButton.Builder()
                         .setDisplayName(
-                            getString(if (player.shuffleModeEnabled) R.string.action_shuffle_off else R.string.action_shuffle_on),
+                            shuffleButtonLabel(),
                         )
-                        .setIconResId(if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle)
+                        .setIconResId(shuffleButtonIcon())
                         .setSessionCommand(CommandToggleShuffle)
                     AndroidAutoCustomAction.REPEAT -> CommandButton.Builder()
                         .setDisplayName(
@@ -4235,6 +4236,18 @@ class MusicService :
         return DefaultShuffleOrder(shuffledIndices, System.currentTimeMillis())
     }
 
+    private fun shuffleButtonIcon(): Int = when {
+        player.shuffleModeEnabled && smartShuffleEnabled.value -> R.drawable.shuffle_smart
+        player.shuffleModeEnabled -> R.drawable.shuffle_on
+        else -> R.drawable.shuffle
+    }
+
+    private fun shuffleButtonLabel(): String = when {
+        player.shuffleModeEnabled && smartShuffleEnabled.value -> getString(R.string.action_shuffle_off)
+        player.shuffleModeEnabled -> getString(R.string.smart_shuffle)
+        else -> getString(R.string.action_shuffle_on)
+    }
+
     /** Botão de aleatório com 3 estados: desligado → aleatório → aleatório inteligente → desligado. */
     fun cycleShuffleMode() {
         when {
@@ -4266,6 +4279,7 @@ class MusicService :
             removeSmartShuffleRecommendations()
         }
         updateNotification()
+        updateAndroidAutoButtons()
     }
 
     private fun onSmartShuffleTransition(mediaItem: MediaItem?) {

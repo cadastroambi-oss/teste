@@ -104,6 +104,7 @@ class MediaLibrarySessionCallback
         private val spotifyTracksCache = ConcurrentHashMap<String, CachedSpotifyTracks>()
         var toggleLike: () -> Unit = {}
         var toggleStartRadio: () -> Unit = {}
+        var cycleShuffleMode: () -> Unit = {}
         var toggleLibrary: () -> Unit = {}
         var toggleDownload: () -> Unit = {}
         var toggleSleepTimer: () -> Unit = {}
@@ -273,8 +274,8 @@ class MediaLibrarySessionCallback
                 }
 
                 MediaSessionConstants.ACTION_TOGGLE_SHUFFLE -> {
-                    session.player.shuffleModeEnabled =
-                        !session.player.shuffleModeEnabled
+                    // desligado → aleatório → aleatório inteligente → desligado (igual ao celular)
+                    cycleShuffleMode()
                     true
                 }
 
