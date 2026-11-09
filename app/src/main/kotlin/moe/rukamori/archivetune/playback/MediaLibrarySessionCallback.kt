@@ -92,6 +92,7 @@ class MediaLibrarySessionCallback
         private val onlineSearchItemCache = ConcurrentHashMap<String, MediaItem>()
         var toggleLike: () -> Unit = {}
         var toggleStartRadio: () -> Unit = {}
+        var cycleShuffleMode: () -> Unit = {}
         var toggleLibrary: () -> Unit = {}
         var carMediaButtonPreferences: (AndroidAutoConfiguration) -> List<CommandButton> = { emptyList() }
 
@@ -235,8 +236,8 @@ class MediaLibrarySessionCallback
                 }
 
                 MediaSessionConstants.ACTION_TOGGLE_SHUFFLE -> {
-                    session.player.shuffleModeEnabled =
-                        !session.player.shuffleModeEnabled
+                    // desligado → aleatório → aleatório inteligente → desligado (igual ao celular)
+                    cycleShuffleMode()
                     true
                 }
 
