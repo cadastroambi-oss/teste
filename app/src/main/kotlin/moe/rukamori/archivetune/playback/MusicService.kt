@@ -4392,7 +4392,8 @@ class MusicService :
 
     /** Adiciona a música tocando à playlist de onde o mix saiu (um toque, sem abrir lista). */
     suspend fun addCurrentSongToSourcePlaylist(): AddToSourcePlaylistResult {
-        val playlistId = queueSourcePlaylistId.value ?: return AddToSourcePlaylistResult.FAILED
+        val playlistId = queueSourcePlaylistId.value ?: queueOriginPlaylistId.value
+            ?: return AddToSourcePlaylistResult.FAILED
         val songId = player.currentMediaItem?.mediaId ?: return AddToSourcePlaylistResult.FAILED
         val loggedIn = moe.rukamori.archivetune.innertube.utils.hasYouTubeLoginCookie(
             dataStore.get(moe.rukamori.archivetune.constants.InnerTubeCookieKey, ""),
