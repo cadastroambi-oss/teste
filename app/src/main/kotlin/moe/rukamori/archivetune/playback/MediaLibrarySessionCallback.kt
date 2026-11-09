@@ -337,7 +337,13 @@ class MediaLibrarySessionCallback
                 LibraryResult.ofItem(
                     MediaItem
                         .Builder()
-                        .setMediaId(MusicService.ROOT)
+                        .setMediaId(
+                            if (params?.isSuggested == true && isCarController(session, browser)) {
+                                MusicService.SUGGESTED
+                            } else {
+                                MusicService.ROOT
+                            },
+                        )
                         .setMediaMetadata(
                             MediaMetadata
                                 .Builder()
@@ -678,6 +684,44 @@ class MediaLibrarySessionCallback
                             }
                         }
 
+                        // Página ao deslizar o cartão na meia tela: curtidas primeiro, playlists embaixo.
+                        MusicService.SUGGESTED -> {
+                            val likedSongCount = database.likedSongsCount().first()
+                            buildList {
+                                add(
+                                    queueMediaItem(
+                                        MusicService.LIKED,
+                                        context.getString(R.string.liked_songs),
+                                        context.resources.getQuantityString(
+                                            R.plurals.n_song,
+                                            likedSongCount,
+                                            likedSongCount,
+                                        ),
+                                        drawableUri(R.drawable.favorite),
+                                        MediaMetadata.MEDIA_TYPE_PLAYLIST,
+                                    ),
+                                )
+                                database.playlists(PlaylistSortType.CUSTOM, descending = false).first()
+                                    .take(SUGGESTED_PLAYLIST_LIMIT)
+                                    .forEach { playlist ->
+                                        add(
+                                            queueMediaItem(
+                                                "${MusicService.PLAYLIST}/${playlist.id}",
+                                                playlist.playlist.name,
+                                                context.resources.getQuantityString(
+                                                    R.plurals.n_song,
+                                                    playlist.songCount,
+                                                    playlist.songCount,
+                                                ),
+                                                playlist.thumbnails.firstOrNull()?.toUri()
+                                                    ?: drawableUri(R.drawable.queue_music),
+                                                MediaMetadata.MEDIA_TYPE_PLAYLIST,
+                                            ),
+                                        )
+                                    }
+                            }
+                        }
+
                         MusicService.LIBRARY -> listOf(
                             queueMediaItem(
                                 MusicService.LIKED,
@@ -1001,6 +1045,19 @@ class MediaLibrarySessionCallback
                                         .setExtras(browsableExtras())
                                         .build(),
                                 ).build(),
+                            null,
+                        )
+                    }
+
+                    mediaId == MusicService.SUGGESTED -> {
+                        LibraryResult.ofItem(
+                            browsableMediaItem(
+                                MusicService.SUGGESTED,
+                                context.getString(R.string.android_auto_for_you),
+                                null,
+                                drawableUri(R.drawable.home_filled),
+                                MediaMetadata.MEDIA_TYPE_FOLDER_MIXED,
+                            ),
                             null,
                         )
                     }
@@ -2709,6 +2766,7 @@ class MediaLibrarySessionCallback
             private const val SPOTIFY_TRACKS_CACHE_MS = 600_000L
             private const val SPOTIFY_CAR_RESOLVE_LIMIT = 20
             private const val SPOTIFY_LIKED_SOURCE_ID = "liked"
+            private const val SUGGESTED_PLAYLIST_LIMIT = 20
             private const val AUTO_HOME_PLAYLIST_LIMIT = 20
             private const val HOME_RECENT_WINDOW_MS = 86400000L * 14L
             private const val PLAYLIST_ACTION_SHUFFLE = "_shuffle"
