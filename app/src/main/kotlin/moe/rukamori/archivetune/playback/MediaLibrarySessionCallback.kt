@@ -105,6 +105,8 @@ class MediaLibrarySessionCallback
         var toggleLike: () -> Unit = {}
         var toggleStartRadio: () -> Unit = {}
         var cycleShuffleMode: () -> Unit = {}
+        var addToSourcePlaylist: () -> Unit = {}
+        var onCarQueueOrigin: (String?) -> Unit = {}
         var toggleLibrary: () -> Unit = {}
         var toggleDownload: () -> Unit = {}
         var toggleSleepTimer: () -> Unit = {}
@@ -177,6 +179,7 @@ class MediaLibrarySessionCallback
                 .add(MediaSessionConstants.CommandSeekBackIncrement)
                 .add(MediaSessionConstants.CommandSeekForwardIncrement)
                 .add(MediaSessionConstants.CommandSkipPrevious)
+                .add(MediaSessionConstants.CommandAddToSourcePlaylist)
                 .build()
             builder
                 .setAvailableSessionCommands(availableSessionCommands)
@@ -306,6 +309,11 @@ class MediaLibrarySessionCallback
 
                 MediaSessionConstants.ACTION_SEEK_FORWARD_INCREMENT -> {
                     seekByIncrement(true)
+                    true
+                }
+
+                MediaSessionConstants.ACTION_ADD_TO_SOURCE_PLAYLIST -> {
+                    addToSourcePlaylist()
                     true
                 }
 
@@ -1307,6 +1315,16 @@ class MediaLibrarySessionCallback
                     MediaSession.MediaItemsWithStartPosition(emptyList(), startIndex, startPositionMs)
                 val firstItem = mediaItems.firstOrNull() ?: return@future defaultResult
                 val isCarController = isCarController(mediaSession, controller)
+                // Lembra de qual playlist a fila veio (para o botão "adicionar à playlist" no carro).
+                val originPath = firstItem.mediaId.split("/").filter { it.isNotBlank() }
+                if (!(originPath.firstOrNull() == MusicService.PLAYLIST && originPath.getOrNull(2) == PLAYLIST_ACTION_ADD_CURRENT_SONG)) {
+                    val originId = originPath
+                        .takeIf { it.firstOrNull() == MusicService.PLAYLIST }
+                        ?.getOrNull(1)
+                        ?.takeIf { it != PlaylistEntity.LIKED_PLAYLIST_ID && it != PlaylistEntity.DOWNLOADED_PLAYLIST_ID }
+                        ?.takeIf { database.playlist(it).first() != null }
+                    withContext(Dispatchers.Main.immediate) { onCarQueueOrigin(originId) }
+                }
                 val configuration = if (isCarController) androidAutoSettings.currentConfiguration() else null
                 val localSongsAllowed = configuration == null ||
                     (configuration.localSongs && androidAutoSettings.hasLocalAudioPermission())
@@ -1318,6 +1336,7 @@ class MediaLibrarySessionCallback
                 if (isCarController && voicePlaylist.isNotBlank()) {
                     val playlist = database.searchPlaylists(voicePlaylist, previewSize = 1).first().firstOrNull()
                     if (playlist != null) {
+                        withContext(Dispatchers.Main.immediate) { onCarQueueOrigin(playlist.id) }
                         val songs = playlistSongs(playlist.id)
                             .availableForCar(localSongsAllowed, onlineContentAllowed)
                         if (songs.isNotEmpty()) {
