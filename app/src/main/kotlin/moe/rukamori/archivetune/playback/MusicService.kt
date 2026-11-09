@@ -170,6 +170,7 @@ import moe.rukamori.archivetune.constants.ListenBrainzEnabledKey
 import moe.rukamori.archivetune.constants.ListenBrainzTokenKey
 import moe.rukamori.archivetune.constants.MaxSongCacheSizeKey
 import moe.rukamori.archivetune.constants.MediaSessionConstants.CommandSkipPrevious
+import moe.rukamori.archivetune.constants.MediaSessionConstants.CommandAddToSourcePlaylist
 import moe.rukamori.archivetune.constants.MediaSessionConstants.CommandToggleLike
 import moe.rukamori.archivetune.constants.MediaSessionConstants.CommandToggleRepeatMode
 import moe.rukamori.archivetune.constants.MediaSessionConstants.CommandToggleShuffle
@@ -483,6 +484,37 @@ class MusicService :
 
     /** Playlist tocando diretamente agora (não mix). */
     val queueOriginPlaylistId = MutableStateFlow<String?>(null)
+
+    /**
+     * No carro, o ❤ vira "adicionar à playlist" quando está tocando o mix de uma playlist ou
+     * uma playlist no aleatório inteligente. Músicas curtidas e o resto continuam com o ❤.
+     */
+    private fun carPlaylistAddTarget(): String? =
+        queueSourcePlaylistId.value
+            ?: queueOriginPlaylistId.value?.takeIf { player.shuffleModeEnabled && smartShuffleEnabled.value }
+
+    @Volatile
+    private var currentSongInTargetPlaylist = false
+    private var membershipJob: Job? = null
+
+    private fun refreshTargetPlaylistMembership() {
+        val target = queueSourcePlaylistId.value ?: queueOriginPlaylistId.value
+        val songId = player.currentMediaItem?.mediaId
+        membershipJob?.cancel()
+        membershipJob = scope.launch {
+            val inPlaylist =
+                if (target == null || songId == null) {
+                    false
+                } else {
+                    withContext(Dispatchers.IO) {
+                        runCatching { database.playlistDuplicates(target, listOf(songId)).isNotEmpty() }.getOrDefault(false)
+                    }
+                }
+            currentSongInTargetPlaylist = inPlaylist
+            updateNotification()
+            updateAndroidAutoButtons()
+        }
+    }
 
     /** Toca a fila já com o modo aleatório do player ligado (permite o aleatório inteligente). */
     fun playQueueShuffled(queue: Queue) {
@@ -1317,6 +1349,17 @@ class MusicService :
             toggleLike = ::toggleLike
             toggleStartRadio = ::toggleStartRadio
             cycleShuffleMode = ::cycleShuffleMode
+            addToSourcePlaylist = {
+                scope.launch {
+                    addCurrentSongToSourcePlaylist()
+                    refreshTargetPlaylistMembership()
+                }
+            }
+            onCarQueueOrigin = { originId ->
+                queueSourcePlaylistId.value = null
+                queueOriginPlaylistId.value = originId
+                refreshTargetPlaylistMembership()
+            }
             toggleLibrary = ::toggleLibrary
             carMediaButtonPreferences = ::buildAndroidAutoButtons
         }
@@ -3985,7 +4028,13 @@ class MusicService :
             .distinct()
             .mapIndexed { index, action ->
                 when (action) {
-                    AndroidAutoCustomAction.LIKE -> CommandButton.Builder()
+                    AndroidAutoCustomAction.LIKE -> if (carPlaylistAddTarget() != null) {
+                        CommandButton.Builder()
+                            .setDisplayName(getString(R.string.add_to_playlist))
+                            .setIconResId(if (currentSongInTargetPlaylist) R.drawable.done else R.drawable.playlist_add)
+                            .setSessionCommand(CommandAddToSourcePlaylist)
+                            .setEnabled(currentSong.value != null)
+                    } else CommandButton.Builder()
                         .setDisplayName(
                             getString(if (currentSong.value?.song?.liked == true) R.string.action_remove_like else R.string.action_like),
                         )
@@ -4188,6 +4237,7 @@ class MusicService :
         currentQueue = queue
         queueSourcePlaylistId.value = queue.sourcePlaylistId
         queueOriginPlaylistId.value = queue.originPlaylistId
+        refreshTargetPlaylistMembership()
         queueTitle = null
         val permanentShuffle = dataStore.get(PermanentShuffleKey, false)
         if (!permanentShuffle) {
@@ -4453,8 +4503,7 @@ class MusicService :
             smartShuffleJob?.cancel()
             removeSmartShuffleRecommendations()
         }
-        updateNotification()
-        updateAndroidAutoButtons()
+        refreshTargetPlaylistMembership()
     }
 
     private fun onSmartShuffleTransition(mediaItem: MediaItem?) {
@@ -7282,6 +7331,7 @@ class MusicService :
         beginHistorySession(mediaItem?.mediaId, forceNew = true)
 
         onSmartShuffleTransition(mediaItem)
+        refreshTargetPlaylistMembership()
 
         val joined = togetherSessionState.value as? moe.rukamori.archivetune.together.TogetherSessionState.Joined
         if (joined?.role is moe.rukamori.archivetune.together.TogetherRole.Guest &&
