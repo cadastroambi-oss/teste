@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -26,55 +27,87 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import moe.rukamori.archivetune.LocalDatabase
 import moe.rukamori.archivetune.LocalPlayerConnection
 import moe.rukamori.archivetune.R
+import moe.rukamori.archivetune.models.MediaMetadata
+import moe.rukamori.archivetune.ui.menu.AddToPlaylistDialog
 import moe.rukamori.archivetune.playback.MusicService
 
 /**
- * Botão do player: quando está tocando o mix/rádio de uma playlist, adiciona a música atual
- * direto nessa playlist com um toque. Fica com ✓ quando a música já está na playlist.
+ * Botão do player (no lugar do compartilhar):
+ * - tocando uma playlist (normal, aleatório, inteligente) ou o mix dela: um toque adiciona a música
+ *   atual a essa playlist; fica com ✓ quando ela já está lá;
+ * - tocando outra coisa: abre a lista de playlists para escolher.
  */
 @Composable
 internal fun AddToSourcePlaylistButton(
-    mediaId: String,
+    mediaMetadata: MediaMetadata,
     contentColor: Color,
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val database = LocalDatabase.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val mediaId = mediaMetadata.id
     val sourcePlaylistId by playerConnection.service.queueSourcePlaylistId.collectAsState()
-    val playlistId = sourcePlaylistId ?: return
+    val originPlaylistId by playerConnection.service.queueOriginPlaylistId.collectAsState()
+    val playlistId = sourcePlaylistId ?: originPlaylistId
 
-    val playlistFlow = remember(playlistId) { database.playlist(playlistId) }
+    val playlistFlow = remember(playlistId) { playlistId?.let { database.playlist(it) } ?: flowOf(null) }
     val playlist by playlistFlow.collectAsState(initial = null)
     var refresh by remember { mutableIntStateOf(0) }
     val inPlaylist by produceState(false, mediaId, playlistId, playlist?.songCount, refresh) {
-        value = withContext(Dispatchers.IO) {
-            runCatching { database.playlistDuplicates(playlistId, listOf(mediaId)).isNotEmpty() }.getOrDefault(false)
+        value = if (playlistId == null) {
+            false
+        } else {
+            withContext(Dispatchers.IO) {
+                runCatching { database.playlistDuplicates(playlistId, listOf(mediaId)).isNotEmpty() }.getOrDefault(false)
+            }
         }
     }
     val playlistName = playlist?.playlist?.name.orEmpty()
-    val description = stringResource(R.string.add_to_source_playlist, playlistName)
+    var showChooser by remember { mutableStateOf(false) }
+
+    AddToPlaylistDialog(
+        isVisible = showChooser,
+        onGetSong = {
+            database.withTransaction { insert(mediaMetadata) }
+            listOf(mediaMetadata.id)
+        },
+        onDismiss = { showChooser = false },
+        onAddComplete = { _, playlistNames ->
+            val message =
+                if (playlistNames.size == 1) {
+                    context.getString(R.string.added_to_playlist, playlistNames.first())
+                } else {
+                    context.getString(R.string.added_to_n_playlists, playlistNames.size)
+                }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        },
+    )
 
     Surface(
         onClick = {
-            if (inPlaylist) {
-                Toast.makeText(context, context.getString(R.string.already_in_source_playlist, playlistName), Toast.LENGTH_SHORT).show()
-            } else scope.launch {
-                val message = when (playerConnection.service.addCurrentSongToSourcePlaylist()) {
-                    MusicService.AddToSourcePlaylistResult.ADDED ->
-                        context.getString(R.string.added_to_source_playlist, playlistName)
-                    MusicService.AddToSourcePlaylistResult.ALREADY_IN_PLAYLIST ->
-                        context.getString(R.string.already_in_source_playlist, playlistName)
-                    MusicService.AddToSourcePlaylistResult.FAILED ->
-                        context.getString(R.string.add_to_source_playlist_failed)
+            when {
+                playlistId == null -> showChooser = true
+                inPlaylist ->
+                    Toast.makeText(context, context.getString(R.string.already_in_source_playlist, playlistName), Toast.LENGTH_SHORT).show()
+                else -> scope.launch {
+                    val message = when (playerConnection.service.addCurrentSongToSourcePlaylist()) {
+                        MusicService.AddToSourcePlaylistResult.ADDED ->
+                            context.getString(R.string.added_to_source_playlist, playlistName)
+                        MusicService.AddToSourcePlaylistResult.ALREADY_IN_PLAYLIST ->
+                            context.getString(R.string.already_in_source_playlist, playlistName)
+                        MusicService.AddToSourcePlaylistResult.FAILED ->
+                            context.getString(R.string.add_to_source_playlist_failed)
+                    }
+                    refresh++
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
-                refresh++
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
         },
         shape = RoundedCornerShape(14.dp),
@@ -84,7 +117,12 @@ internal fun AddToSourcePlaylistButton(
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Icon(
                 painter = painterResource(if (inPlaylist) R.drawable.done else R.drawable.playlist_add),
-                contentDescription = description,
+                contentDescription =
+                    if (playlistId == null) {
+                        stringResource(R.string.add_to_playlist)
+                    } else {
+                        stringResource(R.string.add_to_source_playlist, playlistName)
+                    },
                 tint = if (inPlaylist) MaterialTheme.colorScheme.primary else contentColor,
                 modifier = Modifier.size(22.dp),
             )
