@@ -3763,7 +3763,20 @@ class MusicService :
         this is ArrayIndexOutOfBoundsException &&
             stackTrace.any { it.className.startsWith("androidx.media3.extractor") }
 
-    private fun retryPlaybackAfterStreamFailure(
+    /** Espera antes de tentar de novo: na hora, 1,5 s, 3 s (dá tempo de a rede móvel estabilizar). */
+    private suspend fun waitBeforePlaybackRetry(mediaId: String): Boolean {
+        val waitMs = (playbackStreamRecoveryTracker.currentAttempt - 1).coerceAtLeast(0) * 1_500L
+        if (waitMs > 0) {
+            delay(waitMs)
+            if (!isNetworkCurrentlyConnected()) {
+                waitOnNetworkError()
+                return false
+            }
+        }
+        return player.currentMediaItem?.mediaId == mediaId
+    }
+
+    private suspend fun retryPlaybackAfterStreamFailure(
         mediaId: String,
         isFullyDownloadedMedia: Boolean,
         responseException: androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException,
@@ -3787,15 +3800,17 @@ class MusicService :
         }
 
         Timber.tag("MusicService").i(
-            "Retrying playback for %s after stream HTTP %d from %s failed",
+            "Retrying playback for %s after stream HTTP %d from %s failed (attempt %d)",
             mediaId,
             responseException.responseCode,
             requestProfile.variantLabel,
+            playbackStreamRecoveryTracker.currentAttempt,
         )
+        if (!waitBeforePlaybackRetry(mediaId)) return true
         return preparePlaybackFromSnapshot(recoverySnapshot)
     }
 
-    private fun retryPlaybackAfterNetworkFailure(
+    private suspend fun retryPlaybackAfterNetworkFailure(
         mediaId: String,
         isFullyDownloadedMedia: Boolean,
     ): Boolean {
@@ -3810,7 +3825,12 @@ class MusicService :
             return false
         }
 
-        Timber.tag("MusicService").i("Retrying playback for %s after a transient network failure", mediaId)
+        Timber.tag("MusicService").i(
+            "Retrying playback for %s after a transient network failure (attempt %d)",
+            mediaId,
+            playbackStreamRecoveryTracker.currentAttempt,
+        )
+        if (!waitBeforePlaybackRetry(mediaId)) return true
         return preparePlaybackFromSnapshot(recoverySnapshot)
     }
 
