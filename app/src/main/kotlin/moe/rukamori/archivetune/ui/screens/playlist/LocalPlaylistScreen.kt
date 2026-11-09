@@ -157,6 +157,9 @@ fun LocalPlaylistScreen(
     val haptic = LocalHapticFeedback.current
     val playerConnection = LocalPlayerConnection.current ?: return
     val isPlaying by playerConnection.isPlaying.collectAsStateWithLifecycle()
+    val queueOriginPlaylistId by playerConnection.service.queueOriginPlaylistId.collectAsStateWithLifecycle()
+    val shuffleModeOn by playerConnection.shuffleModeEnabled.collectAsStateWithLifecycle()
+    val smartShuffleOn by playerConnection.smartShuffleEnabled.collectAsStateWithLifecycle()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
 
     val playlist by viewModel.playlist.collectAsStateWithLifecycle()
@@ -612,6 +615,7 @@ fun LocalPlaylistScreen(
                                         ?.let { makeTimeString(it * 1000L) },
                                 ).joinToString(MediaDetailMetadataSeparator)
                             val isBookmarked = playlist.playlist.bookmarkedAt != null
+                            val playingThisPlaylist = queueOriginPlaylistId == playlist.id
 
                             MediaDetailHero(
                                 title = playlist.playlist.name,
@@ -624,20 +628,32 @@ fun LocalPlaylistScreen(
                                 isAdded = isBookmarked,
                                 addContentDescription = R.string.add_to_library,
                                 removeContentDescription = R.string.remove_from_library,
+                                // Aleatório como no Spotify: se a playlist não está tocando, começa com o
+                                // aleatório ligado; se já está, alterna aleatório → inteligente → desligado.
+                                shuffleIcon =
+                                    if (playingThisPlaylist && shuffleModeOn && smartShuffleOn) {
+                                        R.drawable.shuffle_smart
+                                    } else {
+                                        R.drawable.shuffle
+                                    },
+                                shuffleActive = playingThisPlaylist && shuffleModeOn,
                                 onShuffle =
                                     if (songs.isEmpty()) {
                                         null
                                     } else {
                                         {
-                                            playerConnection.playQueue(
-                                                ListQueue(
-                                                    title = playlist.playlist.name,
-                                                    items =
-                                                        songs
-                                                            .shuffled()
-                                                            .map { it.song.toMediaItem() },
-                                                ),
-                                            )
+                                            if (playingThisPlaylist) {
+                                                playerConnection.cycleShuffleMode()
+                                            } else {
+                                                playerConnection.service.playQueueShuffled(
+                                                    ListQueue(
+                                                        title = playlist.playlist.name,
+                                                        items = songs.map { it.song.toMediaItem() },
+                                                        startIndex = songs.indices.random(),
+                                                        playlistId = playlist.id,
+                                                    ),
+                                                )
+                                            }
                                         }
                                     },
                                 onPlay =
@@ -649,6 +665,7 @@ fun LocalPlaylistScreen(
                                                 ListQueue(
                                                     title = playlist.playlist.name,
                                                     items = songs.map { it.song.toMediaItem() },
+                                                    playlistId = playlist.id,
                                                 ),
                                             )
                                         }
@@ -979,6 +996,7 @@ fun LocalPlaylistScreen(
                                                             title = playlist!!.playlist.name,
                                                             items = songs.map { it.song.toMediaItem() },
                                                             startIndex = songs.indexOfFirst { it.map.id == song.map.id },
+                                                            playlistId = playlist!!.id,
                                                         ),
                                                     )
                                                 }
@@ -1072,6 +1090,7 @@ fun LocalPlaylistScreen(
                                                                 title = playlist!!.playlist.name,
                                                                 items = songs.map { it.song.toMediaItem() },
                                                                 startIndex = index,
+                                                                playlistId = playlist!!.id,
                                                             ),
                                                         )
                                                     }

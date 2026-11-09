@@ -15,8 +15,10 @@ class ListQueue(
     val items: List<MediaItem>,
     val startIndex: Int = 0,
     val position: Long = 0L,
+    val playlistId: String? = null,
 ) : Queue {
     override val preloadItem: MediaMetadata? = null
+    override val originPlaylistId: String? get() = playlistId
 
     override suspend fun getInitialStatus(): Queue.Status {
         val safeStartIndex =

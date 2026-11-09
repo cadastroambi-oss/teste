@@ -480,6 +480,15 @@ class MusicService :
 
     /** Playlist de origem da fila atual (mix/rádio de uma playlist). */
     val queueSourcePlaylistId = MutableStateFlow<String?>(null)
+
+    /** Playlist tocando diretamente agora (não mix). */
+    val queueOriginPlaylistId = MutableStateFlow<String?>(null)
+
+    /** Toca a fila já com o modo aleatório do player ligado (permite o aleatório inteligente). */
+    fun playQueueShuffled(queue: Queue) {
+        playQueue(queue)
+        if (!isTogetherGuestSession() && !player.shuffleModeEnabled) player.shuffleModeEnabled = true
+    }
     private var smartShuffleCounter = 0
     private var smartShuffleTarget = 3
     private var smartShuffleJob: Job? = null
@@ -4178,6 +4187,7 @@ class MusicService :
         queuePageJob = null
         currentQueue = queue
         queueSourcePlaylistId.value = queue.sourcePlaylistId
+        queueOriginPlaylistId.value = queue.originPlaylistId
         queueTitle = null
         val permanentShuffle = dataStore.get(PermanentShuffleKey, false)
         if (!permanentShuffle) {
