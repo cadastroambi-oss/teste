@@ -80,7 +80,7 @@ class OnlineSearchSuggestionViewModel
                                                             HideExplicitKey,
                                                             false,
                                                         ),
-                                                    )?.filterVideo(context.dataStore.get(HideVideoKey, false))
+                                                    )?.filterVideo(context.dataStore.get(HideVideoKey, true))
                                                     .orEmpty(),
                                                 aiContentFilterPolicy,
                                             ),

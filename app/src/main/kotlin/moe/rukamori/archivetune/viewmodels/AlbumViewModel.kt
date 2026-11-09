@@ -71,7 +71,7 @@ class AlbumViewModel
             combine(
                 database.albumWithSongs(albumId),
                 context.dataStore.data
-                    .map { preferences -> preferences[HideVideoKey] ?: false }
+                    .map { preferences -> preferences[HideVideoKey] ?: true }
                     .distinctUntilChanged(),
             ) { album, hideVideo ->
                 album?.copy(

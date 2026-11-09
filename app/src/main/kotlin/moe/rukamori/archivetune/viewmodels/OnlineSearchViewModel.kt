@@ -111,7 +111,7 @@ class OnlineSearchViewModel
                         val contentFilteredPage =
                             it
                                 .filterExplicit(context.dataStore.get(HideExplicitKey, false))
-                                .filterVideo(context.dataStore.get(HideVideoKey, false))
+                                .filterVideo(context.dataStore.get(HideVideoKey, true))
                         summaryPage =
                             contentFilteredPage.copy(
                                 summaries =
@@ -148,7 +148,7 @@ class OnlineSearchViewModel
                                                 HideExplicitKey,
                                                 false,
                                             ),
-                                        ).filterVideo(context.dataStore.get(HideVideoKey, false)),
+                                        ).filterVideo(context.dataStore.get(HideVideoKey, true)),
                                     aiContentFilterPolicy,
                                 ),
                                 result.continuation,
@@ -175,7 +175,7 @@ class OnlineSearchViewModel
                         filterAiContent(
                             searchResult.items
                                 .filterExplicit(context.dataStore.get(HideExplicitKey, false))
-                                .filterVideo(context.dataStore.get(HideVideoKey, false)),
+                                .filterVideo(context.dataStore.get(HideVideoKey, true)),
                             aiContentFilterPolicy,
                         )
                     viewStateMap[filter] =

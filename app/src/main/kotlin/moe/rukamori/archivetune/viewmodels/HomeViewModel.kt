@@ -405,7 +405,7 @@ class HomeViewModel
 
         private suspend fun filterCommunityPreviewSection(section: HomePage.Section): HomePage.Section {
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-            val hideVideo = context.dataStore.get(HideVideoKey, false)
+            val hideVideo = context.dataStore.get(HideVideoKey, true)
             val blockedArtistIds = database.getBlockedArtistIds().toSet()
             val filteredItems =
                 filterAiContent(
@@ -632,7 +632,7 @@ class HomeViewModel
                 val aiContentFilterPolicy = loadAiContentFilterPolicy()
                 supervisorScope {
                     val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-                    val hideVideo = context.dataStore.get(HideVideoKey, false)
+                    val hideVideo = context.dataStore.get(HideVideoKey, true)
                     val blockedArtistIds = database.getBlockedArtistIds().toSet()
                     val fromTimeStamp = System.currentTimeMillis() - 86400000 * 7 * 2
 
@@ -738,7 +738,7 @@ class HomeViewModel
 
         private suspend fun loadSimilarRecommendations() {
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-            val hideVideo = context.dataStore.get(HideVideoKey, false)
+            val hideVideo = context.dataStore.get(HideVideoKey, true)
             val blockedArtistIds = database.getBlockedArtistIds().toSet()
             val aiContentFilterPolicy = loadAiContentFilterPolicy()
             val fromTimeStamp = System.currentTimeMillis() - 86400000 * 7 * 2
@@ -927,7 +927,7 @@ class HomeViewModel
         private fun loadMoreYouTubeItems(continuation: String?) {
             if (continuation == null || isLoadingMore.value) return
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-            val hideVideo = context.dataStore.get(HideVideoKey, false)
+            val hideVideo = context.dataStore.get(HideVideoKey, true)
 
             viewModelScope.launch(Dispatchers.IO) {
                 isLoadingMore.value = true
@@ -988,7 +988,7 @@ class HomeViewModel
             chipLoadJob =
                 viewModelScope.launch(Dispatchers.IO) {
                     val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-                    val hideVideo = context.dataStore.get(HideVideoKey, false)
+                    val hideVideo = context.dataStore.get(HideVideoKey, true)
                     val blockedArtistIds = database.getBlockedArtistIds().toSet()
                     val aiContentFilterPolicy = loadAiContentFilterPolicy()
                     val nextSections =

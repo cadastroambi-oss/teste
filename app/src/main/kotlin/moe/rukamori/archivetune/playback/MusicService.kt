@@ -1280,7 +1280,7 @@ class MusicService :
                 removeBlockedArtistItems(updatedBlockedArtistIds)
             }
         dataStore.data
-            .map { preferences -> preferences[HideVideoKey] ?: false }
+            .map { preferences -> preferences[HideVideoKey] ?: true }
             .distinctUntilChanged()
             .collect(scope) { shouldHideMusicVideos ->
                 hideMusicVideos = shouldHideMusicVideos
@@ -2262,7 +2262,7 @@ class MusicService :
         try {
             val initialStatus = withContext(Dispatchers.IO) {
                 persistedQueue.toQueue().getInitialStatus().filterPlaybackContent(
-                    dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, false),
+                    dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, true),
                 )
             }
             withContext(Dispatchers.Main.immediate) {
@@ -4112,7 +4112,7 @@ class MusicService :
                             .getInitialStatus()
                             .filterPlaybackContent(
                                 hideExplicit = dataStore.get(HideExplicitKey, false),
-                                hideVideo = dataStore.get(HideVideoKey, false),
+                                hideVideo = dataStore.get(HideVideoKey, true),
                             )
                     }
                 } catch (error: CancellationException) {
@@ -4197,7 +4197,7 @@ class MusicService :
         clearAutomix()
         initialQueueJob = scope.launch(SilentHandler) {
             val hideExplicit = dataStore.get(HideExplicitKey, false)
-            val hideVideo = dataStore.get(HideVideoKey, false)
+            val hideVideo = dataStore.get(HideVideoKey, true)
             val autoLoadMoreEnabled = dataStore.get(AutoLoadMoreKey, true)
             val preloadItem =
                 queue.preloadItem
@@ -4514,7 +4514,7 @@ class MusicService :
                     YouTubeQueue(WatchEndpoint(videoId = seedId), followAutomixPreview = true)
                         .getInitialStatus()
                         .items
-                        .filterPlaybackContent(dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, false))
+                        .filterPlaybackContent(dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, true))
                 }
             smartShufflePool.clear()
             smartShufflePool.addAll(items)
@@ -4564,7 +4564,7 @@ class MusicService :
                 val queue = YouTubeQueue(WatchEndpoint(videoId = metadata.id), followAutomixPreview = true)
                 val status = withContext(Dispatchers.IO) {
                     queue.getInitialStatus().filterPlaybackContent(
-                        dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, false),
+                        dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, true),
                     )
                 }
                 if (generation != recommendationGeneration || player.currentMediaItem?.queueEntryId != seedEntry ||
@@ -4679,7 +4679,7 @@ class MusicService :
                 val queue = YouTubeQueue(endpoint, followAutomixPreview = chipId == null)
                 val status = withContext(Dispatchers.IO) {
                     queue.getInitialStatus().filterPlaybackContent(
-                        dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, false),
+                        dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, true),
                     )
                 }
                 if (generation != recommendationGeneration || currentQueue !== source ||
@@ -4827,7 +4827,7 @@ class MusicService :
                         page != null -> page.items.map { it.toMediaItem().withQueueEntry(recommended = true) }
                         else -> queue.getInitialStatus().items
                     }
-                    page to items.filterPlaybackContent(dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, false))
+                    page to items.filterPlaybackContent(dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, true))
                 }
                 if (generation != infiniteQueueGeneration || recommendationVersion != recommendationGeneration ||
                     currentQueue !== source || !dataStore.get(AutoLoadMoreKey, true) || isTogetherGuestSession()
@@ -4866,7 +4866,7 @@ class MusicService :
             try {
                 val items = withContext(Dispatchers.IO) {
                     queue.nextPage().filterPlaybackContent(
-                        dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, false),
+                        dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, true),
                     )
                 }
                 if (currentQueue !== queue || player.playbackState == STATE_IDLE) return@launch
