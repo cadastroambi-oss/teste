@@ -22,6 +22,9 @@ interface Queue {
     /** Playlist de onde a fila saiu (ex.: mix de uma playlist), para o botão "adicionar à playlist". */
     val sourcePlaylistId: String? get() = null
 
+    /** Playlist tocada diretamente (para o botão de aleatório da tela da playlist). */
+    val originPlaylistId: String? get() = null
+
     suspend fun getInitialStatus(): Status
 
     fun shouldExpandToFullQueueWhenAutoLoadMoreDisabled(): Boolean = false

@@ -83,6 +83,8 @@ public fun MediaDetailHero(
     description: String? = null,
     additionalPrimaryActions: (@Composable RowScope.(Color) -> Unit)? = null,
     isToggleAddEnabled: Boolean = true,
+    @DrawableRes shuffleIcon: Int = R.drawable.shuffle,
+    shuffleActive: Boolean = false,
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
     val menuState = LocalMenuState.current
@@ -216,6 +218,8 @@ public fun MediaDetailHero(
                 addContentDescription = addContentDescription,
                 removeContentDescription = removeContentDescription,
                 onShuffle = onShuffle,
+                shuffleIcon = shuffleIcon,
+                shuffleActive = shuffleActive,
                 onPlay = onPlay,
                 onToggleAdd =
                     remember(isAdded, menuState, onToggleAdd, removeContentDescription, title) {
@@ -298,6 +302,8 @@ public fun MediaDetailPrimaryActions(
     modifier: Modifier = Modifier,
     additionalActions: (@Composable RowScope.(Color) -> Unit)? = null,
     isToggleAddEnabled: Boolean = true,
+    @DrawableRes shuffleIcon: Int = R.drawable.shuffle,
+    shuffleActive: Boolean = false,
 ) {
     val secondaryButtonColors =
         IconButtonDefaults.filledTonalIconButtonColors(
@@ -342,14 +348,22 @@ public fun MediaDetailPrimaryActions(
                     FilledTonalIconButton(
                         onClick = shuffle,
                         shape = CircleShape,
-                        colors = secondaryButtonColors,
+                        colors =
+                            if (shuffleActive) {
+                                IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            } else {
+                                secondaryButtonColors
+                            },
                         modifier =
                             Modifier
                                 .layoutId(MediaDetailActionLayoutId.Shuffle)
                                 .size(MediaDetailSecondaryActionSize),
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.shuffle),
+                            painter = painterResource(shuffleIcon),
                             contentDescription = stringResource(R.string.shuffle),
                             modifier = Modifier.size(22.dp),
                         )
