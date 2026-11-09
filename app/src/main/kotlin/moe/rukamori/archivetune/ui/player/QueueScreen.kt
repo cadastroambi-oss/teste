@@ -316,6 +316,15 @@ private fun QueueSongRow(
                         modifier = Modifier.padding(start = 4.dp))
                 }
             }
+        } else if (entry.smartShuffle) {
+            {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(painterResource(R.drawable.auto_awesome), null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.smart_shuffle_recommendation),
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 4.dp))
+                }
+            }
         } else null,
         supportingContent = {
             val metadata = remember(entry.artists, entry.duration) { joinByBullet(entry.artists, entry.duration) }
@@ -337,6 +346,14 @@ private fun QueueSongRow(
                                 painterResource(if (controls.liked) R.drawable.favorite else R.drawable.favorite_border),
                                 stringResource(if (controls.liked) R.string.action_remove_like else R.string.action_like),
                             )
+                        }
+                    }
+                    if (entry.smartShuffle && !entry.current) {
+                        IconButton(onClick = { onAction(QueueAction.AddEntryToPlaylist(entry.id)) }) {
+                            Icon(painterResource(R.drawable.playlist_add), stringResource(R.string.add_to_playlist))
+                        }
+                        IconButton(onClick = { onAction(QueueAction.Remove(entry.id)) }) {
+                            Icon(painterResource(R.drawable.remove), stringResource(R.string.smart_shuffle_remove))
                         }
                     }
                     IconButton(onClick = menu) { Icon(painterResource(R.drawable.more_vert), stringResource(R.string.more_label)) }

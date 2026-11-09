@@ -18,4 +18,7 @@
     <string name="widget_playback_command_name">Playback remote</string>
     <string name="widget_listening_insights_name">Listening journal</string>
     <string name="widget_playback_controls_description">Song title with like, previous, play/pause, next and start radio</string>
+    <string name="smart_shuffle">Smart shuffle</string>
+    <string name="smart_shuffle_recommendation">Recommended</string>
+    <string name="smart_shuffle_remove">Remove recommendation</string>
 </resources>

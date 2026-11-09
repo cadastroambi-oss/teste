@@ -44,7 +44,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 import javax.inject.Inject
 
-data class QueueEntryData(val id: String, val metadata: MediaMetadata, val current: Boolean, val recommended: Boolean)
+data class QueueEntryData(val id: String, val metadata: MediaMetadata, val current: Boolean, val recommended: Boolean, val smartShuffle: Boolean = false)
 
 data class QueuePlaybackData(
     val entries: List<QueueEntryData>, val playing: Boolean, val repeat: Int, val shuffle: Boolean,
@@ -111,7 +111,7 @@ class QueueRepository @Inject constructor(@ApplicationContext private val contex
                 QueuePlaybackData(
                     windows.mapIndexedNotNull { index, window ->
                         window.mediaItem.metadata?.let {
-                            QueueEntryData(key(window), it, index == current, window.mediaItem.isQueueRecommendation)
+                            QueueEntryData(key(window), it, index == current, window.mediaItem.isQueueRecommendation, window.mediaItem.isSmartShuffleRecommendation)
                         }
                     }, playing, repeat, shuffle,
                 )
@@ -162,7 +162,7 @@ class QueueRepository @Inject constructor(@ApplicationContext private val contex
     }
 
     fun playNext(id: String) { window(id)?.let { connection.value?.moveQueueItemToNext(it.firstPeriodIndex) } }
-    fun shuffle() { connection.value?.player?.let { it.shuffleModeEnabled = !it.shuffleModeEnabled } }
+    fun shuffle() { connection.value?.cycleShuffleMode() }
     fun repeat() { connection.value?.player?.toggleRepeatMode() }
     fun like() { connection.value?.service?.toggleLike() }
     fun clearContinuation() { connection.value?.service?.clearQueueContinuation() }

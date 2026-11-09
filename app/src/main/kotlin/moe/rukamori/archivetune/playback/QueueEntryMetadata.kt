@@ -13,6 +13,7 @@ import java.util.UUID
 
 private const val ENTRY_ID = "archivetune.queue.entry"
 private const val RECOMMENDATION = "archivetune.queue.recommendation"
+private const val SMART_SHUFFLE = "archivetune.queue.smartShuffle"
 
 internal val MediaItem.queueEntryId: String?
     get() = mediaMetadata.extras?.getString(ENTRY_ID)
@@ -20,14 +21,19 @@ internal val MediaItem.queueEntryId: String?
 internal val MediaItem.isQueueRecommendation: Boolean
     get() = mediaMetadata.extras?.getBoolean(RECOMMENDATION, false) == true
 
+internal val MediaItem.isSmartShuffleRecommendation: Boolean
+    get() = mediaMetadata.extras?.getBoolean(SMART_SHUFFLE, false) == true
+
 internal fun MediaItem.withQueueEntry(
     recommended: Boolean = isQueueRecommendation,
     id: String = queueEntryId ?: UUID.randomUUID().toString(),
+    smartShuffle: Boolean = isSmartShuffleRecommendation,
 ): MediaItem = buildUpon().setMediaMetadata(
     mediaMetadata.buildUpon().setExtras(
         Bundle(mediaMetadata.extras ?: Bundle()).apply {
             putString(ENTRY_ID, id)
             putBoolean(RECOMMENDATION, recommended)
+            putBoolean(SMART_SHUFFLE, smartShuffle)
         },
     ).build(),
 ).build()

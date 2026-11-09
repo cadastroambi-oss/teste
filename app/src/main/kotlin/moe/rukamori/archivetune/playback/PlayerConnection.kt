@@ -236,6 +236,10 @@ class PlayerConnection(
         service.startRadioSeamlessly()
     }
 
+    val smartShuffleEnabled = service.smartShuffleEnabled
+
+    fun cycleShuffleMode() = service.cycleShuffleMode()
+
     fun playNext(item: MediaItem) = playNext(listOf(item))
 
     fun playNext(items: List<MediaItem>) {

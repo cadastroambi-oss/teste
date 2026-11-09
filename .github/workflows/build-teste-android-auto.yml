@@ -7,6 +7,9 @@ on:
       - android-auto-sugestoes
       - android-auto-v2
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -37,6 +40,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Usar chave de assinatura fixa (atualizações instalam por cima)
+        run: |
+          mkdir -p ~/.android
+          cp .github/signing/debug.keystore ~/.android/debug.keystore
+
       - name: Build debug APK (instala ao lado do app oficial)
         run: ./gradlew --console=plain assembleGmsMobileUniversalDebug
         env:
@@ -49,3 +57,17 @@ jobs:
           path: |
             app/build/outputs/apk/gms/mobile/universal/debug/*.apk
             app/build/outputs/apk/gmsMobileUniversal/debug/*.apk
+
+      - name: Publicar APK como release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -e
+          cp "$(find app/build/outputs/apk -path '*debug*' -name '*.apk' | head -1)" ArchiveTune-Debug.apk
+          gh release delete teste --yes --cleanup-tag 2>/dev/null || true
+          gh release create teste ArchiveTune-Debug.apk \
+            --target "${{ github.sha }}" \
+            --title "ArchiveTune Debug (teste)" \
+            --notes "Build de teste: Android Auto, widget 4x1, aleatório inteligente." \
+            --prerelease

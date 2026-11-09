@@ -51,6 +51,7 @@ class QueueViewModel @Inject constructor(
     private var draggedId: String? = null
     private var overflow = false
     private var playlist = false
+    private var singlePlaylistAdd = false
     private var createPlaylist = false
     private var playlistName = ""
     private var playlistJob: Job? = null
@@ -141,6 +142,7 @@ class QueueViewModel @Inject constructor(
             }
             is QueueAction.PlayNext -> if (!model.guest) edit.playNext(action.id)
             is QueueAction.Remove -> if (!model.guest) remove(setOf(action.id))
+            is QueueAction.AddEntryToPlaylist -> { selected = setOf(action.id); singlePlaylistAdd = true; playlist = true; overflow = false; publish() }
             is QueueAction.SelectChip -> if (!model.guest) edit.chip(action.id)
             QueueAction.ToggleShuffle -> if (model.canControlPlayback) edit.shuffle()
             QueueAction.ToggleRepeat -> if (model.canControlPlayback) edit.repeat()
@@ -164,8 +166,12 @@ class QueueViewModel @Inject constructor(
             QueueAction.RemoveSelection -> if (!model.guest) remove(selected)
             QueueAction.AddToPlaylist -> { playlist = true; overflow = false; publish() }
             QueueAction.NewPlaylist -> { createPlaylist = true; playlistName = model.title.orEmpty(); overflow = false; publish() }
-            QueueAction.DismissPlaylist -> { playlist = false; createPlaylist = false; publish() }
-            QueueAction.PlaylistAdded -> { playlist = false; selected = emptySet(); publish() }
+            QueueAction.DismissPlaylist -> {
+                playlist = false; createPlaylist = false
+                if (singlePlaylistAdd) { selected = emptySet(); singlePlaylistAdd = false }
+                publish()
+            }
+            QueueAction.PlaylistAdded -> { playlist = false; selected = emptySet(); singlePlaylistAdd = false; publish() }
             is QueueAction.CreatePlaylist -> savePlaylist(action.name)
             is QueueAction.PlaylistName -> { playlistName = action.value; publish() }
             is QueueAction.Drag -> {

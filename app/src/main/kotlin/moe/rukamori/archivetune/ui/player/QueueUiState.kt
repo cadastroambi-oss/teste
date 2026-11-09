@@ -29,6 +29,7 @@ data class QueueEntryUi(
     val current: Boolean,
     val recommended: Boolean,
     val selected: Boolean = false,
+    val smartShuffle: Boolean = false,
 )
 
 @Immutable
@@ -79,6 +80,7 @@ sealed interface QueueAction {
     data class Play(val id: String) : QueueAction
     data class Select(val id: String) : QueueAction
     data class Remove(val id: String) : QueueAction
+    data class AddEntryToPlaylist(val id: String) : QueueAction
     data class Menu(val id: String) : QueueAction
     data class PlayNext(val id: String) : QueueAction
     data class SelectChip(val id: String) : QueueAction
