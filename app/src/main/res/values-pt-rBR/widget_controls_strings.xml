@@ -4,4 +4,8 @@
     <string name="smart_shuffle">Aleatório inteligente</string>
     <string name="smart_shuffle_recommendation">Recomendação</string>
     <string name="smart_shuffle_remove">Remover recomendação</string>
+    <string name="add_to_source_playlist">Adicionar a %1$s</string>
+    <string name="added_to_source_playlist">Adicionada a %1$s</string>
+    <string name="already_in_source_playlist">Já está em %1$s</string>
+    <string name="add_to_source_playlist_failed">Não foi possível adicionar à playlist</string>
 </resources>

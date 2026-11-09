@@ -21,4 +21,8 @@
     <string name="smart_shuffle">Smart shuffle</string>
     <string name="smart_shuffle_recommendation">Recommended</string>
     <string name="smart_shuffle_remove">Remove recommendation</string>
+    <string name="add_to_source_playlist">Add to %1$s</string>
+    <string name="added_to_source_playlist">Added to %1$s</string>
+    <string name="already_in_source_playlist">Already in %1$s</string>
+    <string name="add_to_source_playlist_failed">Couldn\'t add to the playlist</string>
 </resources>

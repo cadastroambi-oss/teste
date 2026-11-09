@@ -454,6 +454,8 @@ fun PlayerTopActions(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                AddToSourcePlaylistButton(mediaId = mediaMetadata.id, contentColor = textBackgroundColor)
+
                 Surface(
                     onClick = {
                         val intent =

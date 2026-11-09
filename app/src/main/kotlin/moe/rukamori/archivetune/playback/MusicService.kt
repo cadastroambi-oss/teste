@@ -477,6 +477,9 @@ class MusicService :
     // Aleatório inteligente: no modo aleatório, mistura recomendações parecidas na fila
     // (uma a cada 2 ou 3 músicas), como o Smart Shuffle do Spotify.
     val smartShuffleEnabled = MutableStateFlow(false)
+
+    /** Playlist de origem da fila atual (mix/rádio de uma playlist). */
+    val queueSourcePlaylistId = MutableStateFlow<String?>(null)
     private var smartShuffleCounter = 0
     private var smartShuffleTarget = 3
     private var smartShuffleJob: Job? = null
@@ -4174,6 +4177,7 @@ class MusicService :
         queuePageJob?.cancel()
         queuePageJob = null
         currentQueue = queue
+        queueSourcePlaylistId.value = queue.sourcePlaylistId
         queueTitle = null
         val permanentShuffle = dataStore.get(PermanentShuffleKey, false)
         if (!permanentShuffle) {
@@ -4372,6 +4376,40 @@ class MusicService :
         player.shuffleModeEnabled && smartShuffleEnabled.value -> getString(R.string.action_shuffle_off)
         player.shuffleModeEnabled -> getString(R.string.smart_shuffle)
         else -> getString(R.string.action_shuffle_on)
+    }
+
+    enum class AddToSourcePlaylistResult { ADDED, ALREADY_IN_PLAYLIST, FAILED }
+
+    /** Adiciona a música tocando à playlist de onde o mix saiu (um toque, sem abrir lista). */
+    suspend fun addCurrentSongToSourcePlaylist(): AddToSourcePlaylistResult {
+        val playlistId = queueSourcePlaylistId.value ?: return AddToSourcePlaylistResult.FAILED
+        val songId = player.currentMediaItem?.mediaId ?: return AddToSourcePlaylistResult.FAILED
+        val loggedIn = moe.rukamori.archivetune.innertube.utils.hasYouTubeLoginCookie(
+            dataStore.get(moe.rukamori.archivetune.constants.InnerTubeCookieKey, ""),
+        )
+        return withContext(Dispatchers.IO) {
+            try {
+                val playlist = database.playlist(playlistId).first()
+                    ?: return@withContext AddToSourcePlaylistResult.FAILED
+                if (database.playlistDuplicates(playlistId, listOf(songId)).isNotEmpty()) {
+                    return@withContext AddToSourcePlaylistResult.ALREADY_IN_PLAYLIST
+                }
+                val browseId = playlist.playlist.browseId
+                if (loggedIn && browseId != null) {
+                    val result = YouTube.addToPlaylist(browseId, songId)
+                    if (result.isFailure) return@withContext AddToSourcePlaylistResult.FAILED
+                    database.addSongEntriesToPlaylist(playlist, listOf(songId to result.getOrNull()))
+                } else {
+                    database.addSongToPlaylist(playlist, listOf(songId))
+                }
+                AddToSourcePlaylistResult.ADDED
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Timber.w(error, "Failed to add song to source playlist")
+                AddToSourcePlaylistResult.FAILED
+            }
+        }
     }
 
     /** Botão de aleatório com 3 estados: desligado → aleatório → aleatório inteligente → desligado. */
