@@ -19,6 +19,9 @@ interface Queue {
     val recommendationOnlyContinuation: Boolean get() = isRadio
     val queueChips: List<QueueChip> get() = emptyList()
 
+    /** Playlist de onde a fila saiu (ex.: mix de uma playlist), para o botão "adicionar à playlist". */
+    val sourcePlaylistId: String? get() = null
+
     suspend fun getInitialStatus(): Status
 
     fun shouldExpandToFullQueueWhenAutoLoadMoreDisabled(): Boolean = false
