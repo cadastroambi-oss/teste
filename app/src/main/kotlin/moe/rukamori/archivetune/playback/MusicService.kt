@@ -172,6 +172,7 @@ import moe.rukamori.archivetune.constants.HISTORY_DURATION_MAX
 import moe.rukamori.archivetune.constants.HISTORY_DURATION_MIN
 import moe.rukamori.archivetune.constants.HideExplicitKey
 import moe.rukamori.archivetune.constants.HideVideoKey
+import moe.rukamori.archivetune.constants.SmartShuffleKey
 import moe.rukamori.archivetune.constants.HistoryDuration
 import moe.rukamori.archivetune.constants.LastFMSessionKey
 import moe.rukamori.archivetune.constants.LastFMUseNowPlaying
@@ -536,6 +537,15 @@ class MusicService :
             }
             field = value
         }
+
+    // Aleatório inteligente: no modo aleatório, mistura recomendações parecidas na fila
+    // (uma a cada 2 ou 3 músicas), como o Smart Shuffle do Spotify.
+    val smartShuffleEnabled = MutableStateFlow(false)
+    private var smartShuffleCounter = 0
+    private var smartShuffleTarget = 3
+    private var smartShuffleJob: Job? = null
+    private val smartShufflePool = ArrayDeque<MediaItem>()
+    private var smartShufflePoolSeed: String? = null
     private var recommendationQueue: YouTubeQueue? = null
     private var recommendationRequest: Job? = null
     private var recommendationGeneration = 0L
@@ -2394,6 +2404,7 @@ class MusicService :
         withContext(Dispatchers.Main) {
             player.repeatMode = playerState.repeatMode
             player.shuffleModeEnabled = playerState.shuffleModeEnabled
+            smartShuffleEnabled.value = playerState.shuffleModeEnabled && dataStore.get(SmartShuffleKey, false)
             playerVolume.value = playerState.volume.coerceIn(0f, 1f)
 
             if (player.mediaItemCount > 0) {
@@ -4222,6 +4233,119 @@ class MusicService :
             }.toIntArray()
 
         return DefaultShuffleOrder(shuffledIndices, System.currentTimeMillis())
+    }
+
+    /** Botão de aleatório com 3 estados: desligado → aleatório → aleatório inteligente → desligado. */
+    fun cycleShuffleMode() {
+        when {
+            !player.shuffleModeEnabled -> {
+                setSmartShuffle(false)
+                player.shuffleModeEnabled = true
+            }
+            !smartShuffleEnabled.value && canUseSmartShuffle() -> setSmartShuffle(true)
+            else -> {
+                setSmartShuffle(false)
+                player.shuffleModeEnabled = false
+            }
+        }
+    }
+
+    private fun canUseSmartShuffle(): Boolean =
+        !currentQueue.isRadio && !isTogetherGuestSession() && player.mediaItemCount > 0
+
+    private fun setSmartShuffle(enabled: Boolean) {
+        if (smartShuffleEnabled.value == enabled) return
+        smartShuffleEnabled.value = enabled
+        scope.launch { dataStore.edit { it[SmartShuffleKey] = enabled } }
+        if (enabled) {
+            smartShuffleCounter = 0
+            smartShuffleTarget = (2..3).random()
+            insertSmartShuffleRecommendation()
+        } else {
+            smartShuffleJob?.cancel()
+            removeSmartShuffleRecommendations()
+        }
+        updateNotification()
+    }
+
+    private fun onSmartShuffleTransition(mediaItem: MediaItem?) {
+        if (!smartShuffleEnabled.value || !player.shuffleModeEnabled || mediaItem == null) return
+        if (mediaItem.isSmartShuffleRecommendation) {
+            smartShuffleCounter = 0
+            smartShuffleTarget = (2..3).random()
+            return
+        }
+        // Rádio e reprodução automática já são recomendações.
+        if (mediaItem.isQueueRecommendation || currentQueue.isRadio) return
+        smartShuffleCounter++
+        if (smartShuffleCounter >= smartShuffleTarget) insertSmartShuffleRecommendation()
+    }
+
+    private fun nextQueueItemIsSmartShuffle(): Boolean {
+        val timeline = player.currentTimeline
+        if (timeline.isEmpty || player.currentMediaItemIndex == C.INDEX_UNSET) return false
+        val next = timeline.getNextWindowIndex(player.currentMediaItemIndex, REPEAT_MODE_OFF, player.shuffleModeEnabled)
+        return next != C.INDEX_UNSET && player.getMediaItemAt(next).isSmartShuffleRecommendation
+    }
+
+    private fun insertSmartShuffleRecommendation() {
+        if (smartShuffleJob?.isActive == true || player.mediaItemCount == 0 || nextQueueItemIsSmartShuffle()) return
+        val seedId = player.currentMediaItem?.mediaId ?: return
+        smartShuffleJob = scope.launch {
+            val candidate =
+                try {
+                    nextSmartShuffleCandidate(seedId)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Timber.w(error, "Smart shuffle: failed to load recommendations")
+                    null
+                } ?: return@launch
+            if (!smartShuffleEnabled.value || !player.shuffleModeEnabled) return@launch
+            if (player.currentMediaItem?.mediaId != seedId || nextQueueItemIsSmartShuffle()) return@launch
+            val currentIndex = player.currentMediaItemIndex
+            val insertionIndex = currentIndex + 1
+            val order = buildPlayNextShuffleOrder(currentIndex, insertionIndex, 1)
+            player.addMediaItem(
+                insertionIndex,
+                candidate.withQueueEntry(
+                    recommended = true,
+                    id = java.util.UUID.randomUUID().toString(),
+                    smartShuffle = true,
+                ),
+            )
+            order?.let(localPlayer::setShuffleOrder)
+        }
+    }
+
+    private suspend fun nextSmartShuffleCandidate(seedId: String): MediaItem? {
+        if (smartShufflePoolSeed != seedId) {
+            val items =
+                withContext(Dispatchers.IO) {
+                    YouTubeQueue(WatchEndpoint(videoId = seedId), followAutomixPreview = true)
+                        .getInitialStatus()
+                        .items
+                        .filterPlaybackContent(dataStore.get(HideExplicitKey, false), dataStore.get(HideVideoKey, false))
+                }
+            smartShufflePool.clear()
+            smartShufflePool.addAll(items)
+            smartShufflePoolSeed = seedId
+        }
+        val known = (0 until player.mediaItemCount).mapTo(HashSet()) { player.getMediaItemAt(it).mediaId }
+        val fresh = smartShufflePool.filter { it.mediaId !in known }
+        // Varia um pouco: escolhe entre as primeiras recomendações, não sempre a primeira.
+        val pick = fresh.take(5).randomOrNull() ?: return null
+        smartShufflePool.remove(pick)
+        return pick
+    }
+
+    private fun removeSmartShuffleRecommendations() {
+        val current = player.currentMediaItemIndex
+        for (index in player.mediaItemCount - 1 downTo 0) {
+            if (index != current && player.getMediaItemAt(index).isSmartShuffleRecommendation) {
+                player.removeMediaItem(index)
+            }
+        }
     }
 
     fun startRadioSeamlessly() {
@@ -6978,6 +7102,8 @@ class MusicService :
 
         beginHistorySession(mediaItem?.mediaId, forceNew = true)
 
+        onSmartShuffleTransition(mediaItem)
+
         val joined = togetherSessionState.value as? moe.rukamori.archivetune.together.TogetherSessionState.Joined
         if (joined?.role is moe.rukamori.archivetune.together.TogetherRole.Guest &&
             reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK &&
@@ -7500,6 +7626,8 @@ class MusicService :
         }
         if (shuffleModeEnabled) {
             applyCurrentFirstShuffleOrder()
+        } else {
+            setSmartShuffle(false)
         }
 
         // Save state when shuffle mode changes - must be on Main thread to access player

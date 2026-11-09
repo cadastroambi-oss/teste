@@ -1114,12 +1114,12 @@ fun PlayerPlaybackControls(
                                 .clip(RoundedCornerShape(10.dp))
                                 .clickable {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled
+                                    playerConnection.cycleShuffleMode()
                                 },
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.shuffle),
+                            painter = painterResource(shuffleIconRes()),
                             contentDescription = null,
                             tint =
                                 textBackgroundColor.copy(
@@ -1289,7 +1289,7 @@ fun PlayerPlaybackControls(
                                         android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
                                     )
                                 }
-                                playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled
+                                playerConnection.cycleShuffleMode()
                             },
                             shape = RoundedCornerShape(smallRadius),
                             color =
@@ -1303,7 +1303,7 @@ fun PlayerPlaybackControls(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
-                                    painter = painterResource(R.drawable.shuffle),
+                                    painter = painterResource(shuffleIconRes()),
                                     contentDescription = null,
                                     tint =
                                         textBackgroundColor.copy(
@@ -1751,7 +1751,7 @@ fun PlayerPlaybackControls(
                                     android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
                                 )
                             }
-                            playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled
+                            playerConnection.cycleShuffleMode()
                         },
                         shape = RoundedCornerShape(50),
                         color =
@@ -1767,7 +1767,7 @@ fun PlayerPlaybackControls(
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.shuffle),
+                                painter = painterResource(shuffleIconRes()),
                                 contentDescription = null,
                                 tint =
                                     if (shuffleModeEnabled) {
@@ -3160,7 +3160,7 @@ fun V9PlayerContent(
     val menuState = LocalMenuState.current
 
     val onShuffleClick = {
-        playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled
+        playerConnection.cycleShuffleMode()
     }
     val onRepeatClick = {
         playerConnection.player.repeatMode =
@@ -3899,7 +3899,7 @@ private fun V9BottomToggleRow(
                 inactiveColor = inactiveColor,
                 inactiveContentColor = textColor.copy(alpha = 0.6f),
                 onClick = onShuffleClick,
-                iconId = R.drawable.shuffle,
+                iconId = shuffleIconRes(),
                 contentDesc = stringResource(R.string.shuffle)
             )
 

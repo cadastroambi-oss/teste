@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="smart_shuffle">Aleatório inteligente</string>
+    <string name="smart_shuffle_recommendation">Recomendação</string>
+    <string name="smart_shuffle_remove">Remover recomendação</string>
+</resources>

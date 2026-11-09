@@ -25,7 +25,7 @@ class ObserveQueueUseCase @Inject constructor(private val repository: QueueRepos
                 entries = QueueEntries(playback.entries.map { entry ->
                     QueueEntryUi(entry.id, entry.metadata.title, entry.metadata.artists.joinToString { it.name },
                         entry.metadata.thumbnailUrl, makeTimeString(entry.metadata.duration.coerceAtLeast(0) * 1000L),
-                        entry.current, entry.recommended)
+                        entry.current, entry.recommended, smartShuffle = entry.smartShuffle)
                 }),
                 duration = makeTimeString(playback.entries.sumOf { it.metadata.duration.coerceAtLeast(0).toLong() } * 1000L),
                 currentId = playback.entries.firstOrNull { it.current }?.id,

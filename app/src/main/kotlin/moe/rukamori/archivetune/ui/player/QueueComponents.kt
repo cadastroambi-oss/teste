@@ -172,7 +172,7 @@ fun QueuePlaybackControls(
             enabled = model.canControlPlayback,
             shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
             modifier = Modifier.weight(1f).height(56.dp),
-        ) { Icon(painterResource(R.drawable.shuffle), shuffleDescription) }
+        ) { Icon(painterResource(shuffleIconRes()), shuffleDescription) }
         ToggleButton(
             checked = model.repeatMode != Player.REPEAT_MODE_OFF,
             onCheckedChange = { onAction(QueueAction.ToggleRepeat) },
@@ -1351,7 +1351,7 @@ fun QueueCollapsedContentV9(
                     colors = if (shuffleModeEnabled) checkedColors else uncheckedColors,
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.shuffle),
+                        painter = painterResource(shuffleIconRes()),
                         contentDescription =
                             stringResource(
                                 if (shuffleModeEnabled) R.string.action_shuffle_on else R.string.action_shuffle_off,
