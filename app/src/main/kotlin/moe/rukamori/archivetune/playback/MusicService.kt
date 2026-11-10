@@ -406,6 +406,34 @@ class MusicService :
 
     private lateinit var connectivityManager: ConnectivityManager
     lateinit var connectivityObserver: NetworkConnectivityObserver
+
+    // Quando a rede/IP do celular muda (troca de antena, Wi-Fi ↔ dados), os selos e endereços
+    // de áudio guardados deixam de valer: descarta na hora para evitar o erro 403.
+    @Volatile
+    private var lastNetworkSignature: String? = null
+    private val playbackTokenNetworkCallback =
+        object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onLinkPropertiesChanged(
+                network: android.net.Network,
+                linkProperties: android.net.LinkProperties,
+            ) {
+                val signature =
+                    network.toString() + "|" +
+                        linkProperties.linkAddresses.map { it.address.hostAddress.orEmpty() }.sorted().joinToString(",")
+                val previous = lastNetworkSignature
+                lastNetworkSignature = signature
+                if (previous != null && previous != signature) {
+                    Timber.tag("MusicService").i("Network changed: discarding cached playback tokens and stream URLs")
+                    scope.launch {
+                        runCatching {
+                            moe.rukamori.archivetune.utils.potoken.BotGuardTokenGenerator.invalidateAll()
+                            YTPlayerUtils.clearPlaybackAuthCaches()
+                            resolveAudioStream.clear()
+                        }
+                    }
+                }
+            }
+        }
     val waitingForNetworkConnection = MutableStateFlow(false)
     private val isNetworkConnected = MutableStateFlow(false)
 
@@ -1426,6 +1454,10 @@ class MusicService :
 
         connectivityManager = getSystemService()!!
         connectivityObserver = NetworkConnectivityObserver(this)
+        runCatching {
+            getSystemService(android.net.ConnectivityManager::class.java)
+                ?.registerDefaultNetworkCallback(playbackTokenNetworkCallback)
+        }
 
         scope.launch {
             connectivityObserver.networkStatus.collect { isConnected ->
@@ -3853,6 +3885,20 @@ class MusicService :
 
         if (!playbackStreamRecoveryTracker.registerRetryAttempt(mediaId)) {
             return false
+        }
+
+        // 403 = o YouTube recusou o "selo anti-robô" (PO token) ou o endereço guardado.
+        // Antes as tentativas reaproveitavam o mesmo selo do cache e falhavam todas.
+        if (responseException.responseCode == 403) {
+            if (playbackStreamRecoveryTracker.currentAttempt < 3) {
+                Timber.tag("MusicService").i("HTTP 403: discarding cached playback tokens for %s", mediaId)
+                moe.rukamori.archivetune.utils.potoken.BotGuardTokenGenerator.invalidateAll()
+                YTPlayerUtils.clearPlaybackAuthCaches()
+            } else {
+                Timber.tag("MusicService").i("HTTP 403 persists: full playback auth repair for %s", mediaId)
+                YTPlayerUtils.recoverFromBadStreamPlayerResponse(mediaId)
+            }
+            resolveAudioStream.clear()
         }
 
         Timber.tag("MusicService").i(
@@ -9034,6 +9080,10 @@ class MusicService :
         }
         try {
             connectivityObserver.unregister()
+            runCatching {
+                getSystemService(android.net.ConnectivityManager::class.java)
+                    ?.unregisterNetworkCallback(playbackTokenNetworkCallback)
+            }
         } catch (_: Exception) {
         }
         abandonAudioFocus()
