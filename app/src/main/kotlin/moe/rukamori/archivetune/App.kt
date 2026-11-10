@@ -117,6 +117,8 @@ class App :
     override fun onCreate() {
         super.onCreate()
         instance = this
+        // Mesmo caminho de rede (IPv4) para pedir e baixar o áudio: evita o erro 403 nos dados móveis.
+        YouTube.dns = moe.rukamori.archivetune.utils.PreferIpv4Dns(Dns.SYSTEM)
         if (currentProcessName()?.endsWith(":crash") == true) {
             Timber.plant(Timber.DebugTree())
             return
@@ -278,13 +280,13 @@ class App :
                         val url = if (provider == "Custom") customUrl else dnsProviderUrls[provider]
                         if (!url.isNullOrBlank() && url.startsWith("https://")) {
                             runCatching {
-                                YouTube.dns = YouTube.createDnsOverHttps(url)
+                                YouTube.dns = moe.rukamori.archivetune.utils.PreferIpv4Dns(YouTube.createDnsOverHttps(url))
                             }
                         } else {
-                            YouTube.dns = Dns.SYSTEM
+                            YouTube.dns = moe.rukamori.archivetune.utils.PreferIpv4Dns(Dns.SYSTEM)
                         }
                     } else {
-                        YouTube.dns = Dns.SYSTEM
+                        YouTube.dns = moe.rukamori.archivetune.utils.PreferIpv4Dns(Dns.SYSTEM)
                     }
                 }
         }

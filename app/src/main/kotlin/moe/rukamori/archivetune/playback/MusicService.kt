@@ -421,6 +421,7 @@ class MusicService :
         OkHttpClient
             .Builder()
             .proxy(YouTube.streamOkHttpProxy)
+            .dns(moe.rukamori.archivetune.utils.PreferIpv4Dns.forYouTubeMedia)
             .followRedirects(true)
             .followSslRedirects(true)
             .connectTimeout(30, TimeUnit.SECONDS)
