@@ -3607,8 +3607,8 @@ class MusicService :
                     notificationButtons.filter {
                         val action = it.sessionCommand?.customAction
                         action !in carCommands &&
-                            action != MediaSessionConstants.ACTION_SEEK_BACK_INCREMENT &&
-                            action != MediaSessionConstants.ACTION_SEEK_FORWARD_INCREMENT
+                            action != moe.rukamori.archivetune.constants.MediaSessionConstants.ACTION_SEEK_BACK_INCREMENT &&
+                            action != moe.rukamori.archivetune.constants.MediaSessionConstants.ACTION_SEEK_FORWARD_INCREMENT
                     }
                 mediaSession.setMediaButtonPreferences(carButtons + extraButtons)
                 carLayoutApplied = true

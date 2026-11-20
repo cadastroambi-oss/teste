@@ -282,6 +282,8 @@ fun ImmersiveMediaHeader(
     description: String? = null,
     additionalPrimaryActions: (@Composable RowScope.(Color) -> Unit)? = null,
     isToggleAddEnabled: Boolean = true,
+    @DrawableRes shuffleIcon: Int = R.drawable.shuffle,
+    shuffleActive: Boolean = false,
 ) {
     val menuState = LocalMenuState.current
     val confirmedToggleAdd =
@@ -380,6 +382,8 @@ fun ImmersiveMediaHeader(
             onPlay = onPlay,
             onToggleAdd = confirmedToggleAdd,
             isToggleAddEnabled = isToggleAddEnabled,
+            shuffleIcon = shuffleIcon,
+            shuffleActive = shuffleActive,
             modifier = Modifier.padding(top = 20.dp),
         )
 
@@ -414,6 +418,8 @@ fun ImmersivePrimaryActions(
     onToggleAdd: (() -> Unit)?,
     modifier: Modifier = Modifier,
     isToggleAddEnabled: Boolean = true,
+    @DrawableRes shuffleIcon: Int = R.drawable.shuffle,
+    shuffleActive: Boolean = false,
 ) {
     Row(
         modifier =
@@ -426,10 +432,11 @@ fun ImmersivePrimaryActions(
     ) {
         if (onShuffle != null) {
             ImmersiveCircleAction(
-                icon = R.drawable.shuffle,
+                icon = shuffleIcon,
                 contentDescription = R.string.shuffle,
                 colors = colors,
                 onClick = onShuffle,
+                selected = shuffleActive,
             )
         } else if (onToggleAdd != null) {
             Spacer(modifier = Modifier.size(ImmersiveCircleActionSize))
