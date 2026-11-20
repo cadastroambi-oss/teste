@@ -79,6 +79,10 @@ import java.util.Locale
 
 @Dao
 interface DatabaseDao {
+    /** Músicas (do YouTube) que estão em alguma playlist: usadas no download automático das playlists. */
+    @Query("SELECT * FROM song WHERE isLocal = 0 AND id IN (SELECT songId FROM playlist_song_map)")
+    fun playlistSongsForAutoDownload(): Flow<List<SongEntity>>
+
     @Transaction
     @Query("SELECT song.* FROM song INNER JOIN format ON format.id = song.id WHERE song.isLocal = 0")
     fun downloadedSongsList(): List<Song>
