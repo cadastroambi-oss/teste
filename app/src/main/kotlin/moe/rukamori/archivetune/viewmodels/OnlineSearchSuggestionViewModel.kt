@@ -108,7 +108,7 @@ class OnlineSearchSuggestionViewModel
                     YouTube.searchSuggestions(query).fold(
                         onSuccess = { result ->
                             val hideExplicit = context.dataStore.getAsync(HideExplicitKey, false)
-                            val hideVideo = context.dataStore.getAsync(HideVideoKey, false)
+                            val hideVideo = context.dataStore.getAsync(HideVideoKey, true)
                             RemoteSuggestions(
                                 status = SuggestionRemoteStatus.Loaded,
                                 queries = result.queries.distinct(),

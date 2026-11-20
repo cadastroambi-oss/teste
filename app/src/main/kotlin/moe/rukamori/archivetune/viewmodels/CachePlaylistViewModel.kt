@@ -47,7 +47,7 @@ class CachePlaylistViewModel
             viewModelScope.launch(Dispatchers.IO) {
                 while (true) {
                     val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-                    val hideVideo = context.dataStore.get(HideVideoKey, false)
+                    val hideVideo = context.dataStore.get(HideVideoKey, true)
                     val pureCacheIds = playerCache.keys.toSet().subtract(downloadCache.keys.toSet())
 
                     val songs =

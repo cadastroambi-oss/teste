@@ -53,7 +53,7 @@ class LoadGenreDiscoveryUseCase @Inject constructor(
                 "Repeated browse continuation"
             }
             val hideExplicit = context.dataStore.get(HideExplicitKey, false)
-            val hideVideo = context.dataStore.get(HideVideoKey, false)
+            val hideVideo = context.dataStore.get(HideVideoKey, true)
             val blockedArtists = database.getBlockedArtistIds().toSet()
             val policy = loadAiContentFilterPolicy()
             Result.success(

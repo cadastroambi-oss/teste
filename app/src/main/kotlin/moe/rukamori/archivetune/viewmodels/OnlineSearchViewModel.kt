@@ -198,7 +198,7 @@ class OnlineSearchViewModel
 
         private suspend fun hideExplicit() = context.dataStore.getAsync(HideExplicitKey, false)
 
-        private suspend fun hideVideo() = context.dataStore.getAsync(HideVideoKey, false)
+        private suspend fun hideVideo() = context.dataStore.getAsync(HideVideoKey, true)
 
         private fun Throwable.toSearchLoadError(): SearchLoadError {
             if (this is CancellationException) throw this

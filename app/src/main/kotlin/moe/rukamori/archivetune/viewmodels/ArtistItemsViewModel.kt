@@ -66,7 +66,7 @@ class ArtistItemsViewModel
                                     artistItemsPage.items
                                         .distinctBy { it.id }
                                         .filterExplicit(context.dataStore.get(HideExplicitKey, false))
-                                        .filterVideo(context.dataStore.get(HideVideoKey, false))
+                                        .filterVideo(context.dataStore.get(HideVideoKey, true))
                                         .filterBlockedArtists(database.getBlockedArtistIds().toSet()),
                                 continuation = artistItemsPage.continuation,
                             )
@@ -89,7 +89,7 @@ class ArtistItemsViewModel
                                     (oldItemsPage.items + artistItemsContinuationPage.items)
                                         .distinctBy { it.id }
                                         .filterExplicit(context.dataStore.get(HideExplicitKey, false))
-                                        .filterVideo(context.dataStore.get(HideVideoKey, false))
+                                        .filterVideo(context.dataStore.get(HideVideoKey, true))
                                         .filterBlockedArtists(database.getBlockedArtistIds().toSet()),
                                 continuation = artistItemsContinuationPage.continuation,
                             )
