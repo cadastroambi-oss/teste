@@ -6570,45 +6570,18 @@ class MusicService :
     }
 
     // Download automático das playlists: toda música que estiver em alguma playlist é baixada
-    // (as que já estão e as que forem adicionadas por qualquer caminho). Só no Wi-Fi, para não
-    // gastar os dados móveis; o que faltar baixa quando conectar num Wi-Fi.
+    // (as que já estão e as que forem adicionadas por qualquer caminho), em qualquer rede.
+    // Nada é apagado automaticamente: os downloads só saem quando o usuário apagar.
     private val playlistAutoDownloadRequested = java.util.Collections.synchronizedSet(mutableSetOf<String>())
-
-    /** true quando há internet por uma rede não tarifada (Wi-Fi). */
-    private fun unmeteredNetworkFlow(): kotlinx.coroutines.flow.Flow<Boolean> =
-        kotlinx.coroutines.flow.callbackFlow {
-            val manager = getSystemService(android.net.ConnectivityManager::class.java)
-            val callback =
-                object : android.net.ConnectivityManager.NetworkCallback() {
-                    override fun onCapabilitiesChanged(
-                        network: android.net.Network,
-                        capabilities: android.net.NetworkCapabilities,
-                    ) {
-                        trySend(
-                            capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                                capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
-                        )
-                    }
-
-                    override fun onLost(network: android.net.Network) {
-                        trySend(false)
-                    }
-                }
-            trySend(manager?.activeNetwork != null && manager.isActiveNetworkMetered.not())
-            runCatching { manager?.registerDefaultNetworkCallback(callback) }
-            kotlinx.coroutines.channels.awaitClose { runCatching { manager?.unregisterNetworkCallback(callback) } }
-        }.distinctUntilChanged()
 
     private fun startPlaylistAutoDownload() {
         scope.launch {
             kotlinx.coroutines.flow.combine(
                 database.playlistSongsForAutoDownload(),
                 moduleDownloadUtil.downloads,
-                unmeteredNetworkFlow(),
-            ) { songs, downloads, unmetered -> Triple(songs, downloads, unmetered) }
+            ) { songs, downloads -> songs to downloads }
                 .debounce(3_000)
-                .collect { (songs, downloads, unmetered) ->
-                    if (!unmetered) return@collect
+                .collect { (songs, downloads) ->
                     songs
                         .filter { it.id !in downloads && it.id !in playlistAutoDownloadRequested }
                         .take(PLAYLIST_AUTO_DOWNLOAD_BATCH)
